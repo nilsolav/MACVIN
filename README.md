@@ -14,7 +14,8 @@ The list of cruises are described here:
 | shipname | Name of the vessel |
 | RAW_files | The path to the raw acoustic data |
 | Original_WORK_files | Path to the orginal work files (if exist) |
-| WS_WORK_files	koronaprocessing | Path to the predictions from the Korona categorization module |
+| WS_WORK_files	| LSSS files generated at the workshop |
+| koronaprocessing | Path to the predictions from the Korona categorization module |
 
 # Processing
 
