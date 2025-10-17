@@ -8,16 +8,17 @@ cr = pd.read_csv('cruises.csv')
 for i, _row in cr.iterrows(): 
     rawdatapath = Path(_row['RAW_files'])
     cruise = _row['cruise']
-    
+    print(cruise)
+    print('Rawpath:'+str(rawdatapath.exists()))
     if rawdatapath.exists():
+        rawfileexist = False
         for filename in os.listdir(rawdatapath):
             if filename.endswith('.raw'):
                 rawfileexist = True
-            else:
-                rawfileexist = False
+                
+        print('Rawfiles:'+str(rawfileexist))
     else:
         rawfileexist = False
-    print(rawfileexist)
     
     if rawfileexist:
         target_classification = Path(_row['koronaprocessing'])
@@ -34,10 +35,9 @@ for i, _row in cr.iterrows():
             "--env", "OUTPUT_NAME="+cruise,
             "acoustic-ek-target_classification-mackerel-korneliussen2016:latest"]
 
-        print(cruise)
-        print(' ')
+        #print(' ')
         print(command)
-        print(' ')
+        #print(' ')
         # Run the command
         try:
             subprocess.run(command, check=True)
