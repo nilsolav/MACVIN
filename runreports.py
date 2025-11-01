@@ -5,6 +5,18 @@ import subprocess
 
 cr = pd.read_csv('cruises.csv')
 
+'''
+Standard data mounting directories
+/RAWDATA          : Location of the raw files
+/WORK             : Location of the LSSS work files
+/PREPROCESSING    : Location of the preprocessed  <survey>_sv.zarr and 
+                    <survey>_labels.zarr zarr stores or the folder of 
+                    the preprocessed files in netcdf format
+/BOTTOM_DETECTION : Location of the <survey>_bottom.zarr files
+/TARGET_CLASSIFICATION : Lcation of the acoustic target classification files
+/REPORTS          : Location of the report files
+'''
+
 for i, _row in cr.iterrows(): 
     rawdatapath = Path(_row['RAW_files'])
     cruise = _row['cruise']
@@ -36,15 +48,14 @@ for i, _row in cr.iterrows():
             "-v", str(report_path)+':/REPORTS',
             "--security-opt", "label=disable",
             "--env", "cruise="+cruise,
-            "--env", "ATCThreshold=0.8",
             "acoustic-ek-reportgeneration-zarr:latest"]
-        break
+        #break
         print(command)
-        '''
+        
         # Run the command
         try:
             subprocess.run(command, check=True)
             print('Successfully processed')
         except subprocess.CalledProcessError as e:
             print(f"Command failed with error: {e}")
-        '''
+
