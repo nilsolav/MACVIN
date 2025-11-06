@@ -40,6 +40,11 @@ for i, _row in cr.iterrows():
             'crimac-preprocessing-korona_mackerel-korneliussen2016')
         # Create directory if not existing
         #report_path.mkdir(parents=True, exist_ok=True)
+        env = ({
+            "CATEGORY": '["1000004", "1000005"]',
+            "THRESHOLD": "0.75",
+            "CRUISE": cruise,
+        })
 
         command = [
             "docker", "run", "-it", "--rm",
@@ -47,9 +52,10 @@ for i, _row in cr.iterrows():
             "-v", str(target_classification)+':/TARGET_CLASSIFICATION',
             "-v", str(report_path)+':/REPORTS',
             "--security-opt", "label=disable",
-            "--env", "cruise="+cruise,
-            "acoustic-ek-reportgeneration-zarr:latest"]
-        #break
+        ]
+        for key, value in env.items():
+            command += ["--env", f"{key}={value}"]
+        command.append("acoustic-ek-reportgeneration-zarr:latest")
         print(command)
         
         # Run the command
