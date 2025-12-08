@@ -28,13 +28,12 @@ for i, _row in cr.iterrows():
 
         command = [
             "docker", "run", "-it", "--rm",
-            "-v", str(rawdatapath)+':/RAWDATA',
-            "-v", str(target_classification)+':/TARGET_CLASSIFICATION',
+            "-v", str(rawdatapath)+':/datain',
+            "-v", str(target_classification)+':/dataout',
             "--security-opt", "label=disable",
             "--env", "OUTPUT_TYPE=nc",
             "--env", "OUTPUT_NAME="+cruise,
-            "acoustic-ek-target_classification-mackerel-korneliussen2016:latest"]
-
+            "acoustic-ek_target_classification_mackerel-korneliussen2016_blueinsight:local"]
         #print(' ')
         print(command)
         #print(' ')
