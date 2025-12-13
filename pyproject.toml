@@ -1,0 +1,24 @@
+[project]
+name = "macvin"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pandas>=2.3.3",
+    "prefect>=3.6.6",
+]
+
+[dependency-groups]
+dev = [
+    "ipython>=8.37.0",
+    "pytest>=9.0.2",
+    "ruff>=0.14.9",
+]
+
+[project.scripts]
+macvin-pipeline = "macvin.pipeline:main"
+macvin-test = "macvin.test:main"
+
+[tool.uv]
+package = true

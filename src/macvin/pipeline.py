@@ -1,4 +1,4 @@
-#from prefect import task
+from prefect import task, flow
 #from prefect.logging import get_run_logger
 #from prefect.artifacts import create_markdown_artifact
 from pathlib import Path
@@ -6,8 +6,6 @@ from typing import Mapping
 import subprocess
 import datetime
 import pandas as pd
-#from prefect import flow
-from pathlib import Path
 import os
 import logging
 
@@ -22,7 +20,8 @@ logger = logging.getLogger(__name__)
 logger.info("This is an info message")
 logger.warning("This is a warning")
 
-#@flow(name="survey_flow")
+
+@flow(name="survey_flow")
 def survey_flow(
     survey_id: str,
     bronze_dir: Path,
@@ -122,7 +121,7 @@ def survey_flow(
         )
 
 
-#@flow(name="datacompression_flow")
+@flow(name="datacompression_flow")
 def datacompression_flow(
     rawdata: Path,
     preprocessing: Path,
@@ -144,7 +143,7 @@ def datacompression_flow(
     )
 
 
-#@task
+@task
 def run_docker_image(
     image: str,
     volumes: Mapping[Path, str],
@@ -265,14 +264,20 @@ def reportgeneration_zarr(
     )
 
 
-if __name__ == "__main__":
+
+def macvin_flow():
     basedir = Path(os.getenv("CRIMACSCRATCH"))
     cr = pd.read_csv("cruises.csv")
     cruise = Path("S2005114_PGOSARS_4174")
     bronze_dir = basedir / Path("test_data_azure") / cruise / Path("ACOUSTIC", "EK")
     silver_dir = basedir / Path("test_data_azure_silver") / cruise / Path("ACOUSTIC", "EK")
-
+     
     survey_flow(survey_id = str(cruise), bronze_dir = bronze_dir, silver_dir = silver_dir, dry_run=True)
+
+
+def main():
+    macvin_flow()
+
 
 """
 for i, _row in cr.iterrows(): 

@@ -1,7 +1,0 @@
-KoronaScript
-pandas
-xarray
-zarr
-matplotlib
-netcdf4
-dask
