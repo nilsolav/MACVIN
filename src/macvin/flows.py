@@ -15,29 +15,27 @@ from prefect.logging import get_run_logger
 @flow(name="macvin_full_flow")
 def macvin_full_flow():
     logger = get_run_logger()
-    logger.info(f"#### MACVIN FULL FLOW ####")
+    logger.info("#### MACVIN FULL FLOW ####")
 
     # f = '/home/nilsolav/repos/MACVIN/cruises.csv'
     # df = pd.read_csv(f)
     df = pd.read_csv("cruises.csv")
 
-    basedir = Path("/s3")
-
-    # for _cr, i in (cr['RAW_files']):
-
+    basedir = Path("/data/s3/MACWIN-scratch")
+    
     for idx, row in df.iterrows():
         cruise = row["cruise"]
-        bronze_dir = row["RAW_files"]
-
-        logger.info(cruise)
-
-        logger.info(bronze_dir)
+        bronze_dir = Path(row["RAW_files"])
         silver_dir = (
-            basedir / Path("test_data_azure_silver") / cruise / Path("ACOUSTIC", "EK")
+            basedir / Path("silver") / cruise / Path("ACOUSTIC", "EK")
         )
-        logger.info(silver_dir)
-        # survey_flow(survey_id = str(cruise), bronze_dir = bronze_dir,
-        #            silver_dir = silver_dir, dry_run = False)
+        
+        logger.info(cruise)
+        logger.info(f"Bronze dir: {bronze_dir}")
+        logger.info(f"Bronze dir is available : {bronze_dir.exists()}")
+        logger.info(f"Silver dir: {silver_dir}")
+        survey_flow(survey_id = str(cruise), bronze_dir = bronze_dir,
+                    silver_dir = silver_dir, dry_run = False)
 
 
 @flow(name="macvin_test_flow")
