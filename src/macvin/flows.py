@@ -33,7 +33,7 @@ def macvin_full_flow(dry_run: bool = False):
         logger.info(f"Bronze dir: {bronze_dir}")
         logger.info(f"Bronze dir is available : {bronze_dir.exists()}")
         logger.info(f"Silver dir: {silver_dir}")
-        survey_flow(survey_id = str(cruise), bronze_dir = bronze_dir,
+        survey_flow(cruise = str(cruise), bronze_dir = bronze_dir,
                     silver_dir = silver_dir, dry_run = dry_run)
 
 
@@ -53,7 +53,7 @@ def macvin_test_flow(dry_run: bool = True):
     )
 
     survey_flow(
-        survey_id=str(cruise),
+        cruise=str(cruise),
         bronze_dir=bronze_dir,
         silver_dir=silver_dir,
         dry_run=dry_run,
@@ -62,13 +62,13 @@ def macvin_test_flow(dry_run: bool = True):
 
 @flow(name="survey_flow")
 def survey_flow(
-    survey_id: str,
+    cruise: str,
     bronze_dir: Path,
     silver_dir: Path,
     dry_run: bool = False,
 ):
     logger = get_run_logger()
-    logger.info(f"#### {survey_id} ####")
+    logger.info(f"#### {cruise} ####")
     rawdata = bronze_dir
     preprocessing = {
         "noisefiltering": silver_dir / Path("PREPROCESSING", "korona_noisefiltering"),
@@ -152,6 +152,7 @@ def survey_flow(
             preprocessing=preprocessing[_type],
             target_classification=target_classification,
             bottom_detection=bottom_detection,
+            cruise = cruise,
             reports=reports[_type],
             dry_run=dry_run,
         )

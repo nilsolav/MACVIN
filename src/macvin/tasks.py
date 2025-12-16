@@ -135,6 +135,7 @@ def reportgeneration_zarr(
     preprocessing: Path,
     target_classification: Path,
     bottom_detection: Path,
+    cruise : str,
     reports: Path,
     dry_run: bool = False,
 ):
