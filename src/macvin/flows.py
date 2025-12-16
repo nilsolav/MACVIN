@@ -13,13 +13,12 @@ from prefect.logging import get_run_logger
 
 
 @flow(name="macvin_full_flow")
-def macvin_full_flow():
+def macvin_full_flow(dry_run: bool = False):
+    
     logger = get_run_logger()
     logger.info("#### MACVIN FULL FLOW ####")
 
-    # f = '/home/nilsolav/repos/MACVIN/cruises.csv'
-    # df = pd.read_csv(f)
-    df = pd.read_csv("cruises.csv")
+    df = pd.read_csv("cruises.csv")[5:]
 
     basedir = Path("/data/s3/MACWIN-scratch")
     
@@ -35,11 +34,11 @@ def macvin_full_flow():
         logger.info(f"Bronze dir is available : {bronze_dir.exists()}")
         logger.info(f"Silver dir: {silver_dir}")
         survey_flow(survey_id = str(cruise), bronze_dir = bronze_dir,
-                    silver_dir = silver_dir, dry_run = False)
+                    silver_dir = silver_dir, dry_run = dry_run)
 
 
 @flow(name="macvin_test_flow")
-def macvin_test_flow():
+def macvin_test_flow(dry_run: bool = True):
     basedir = Path(os.getenv("CRIMACSCRATCH"))
     cruise = Path("S2005114_PGOSARS_4174")
     bronze_dir = (
@@ -57,7 +56,7 @@ def macvin_test_flow():
         survey_id=str(cruise),
         bronze_dir=bronze_dir,
         silver_dir=silver_dir,
-        dry_run=True,
+        dry_run=dry_run,
     )
 
 
@@ -142,6 +141,7 @@ def survey_flow(
         mackerel_korneliussen2016(
             rawdata=rawdata,
             target_classification=target_classification,
+            dry_run=dry_run,
         )
     )
 
@@ -153,6 +153,7 @@ def survey_flow(
             target_classification=target_classification,
             bottom_detection=bottom_detection,
             reports=reports[_type],
+            dry_run=dry_run,
         )
 
 
@@ -171,10 +172,12 @@ def datacompression_flow(
         rawdata=rawdata,
         preprocessing=preprocessing / Path("tmp"),
         quality_control=quality_control,
+        dry_run=dry_run,
     )
 
     logger.info("# 2b. Data preprocessing: raw -> nc")
     korona_preprocessing(
         rawdata=preprocessing / Path("tmp"),
         preprocessing=preprocessing,
+        dry_run=dry_run,
     )

@@ -10,6 +10,7 @@ def run_docker_image(
     image: str,
     volumes: Mapping[Path, str],
     artifact_key: str | None = None,
+    env: Mapping[str, str] | None = None,
     dry_run: bool = False,
 ):
 
@@ -20,6 +21,11 @@ def run_docker_image(
     for host_path, container_path in volumes.items():
         command.extend(["-v", f"{host_path}:{container_path}"])
 
+    # Environment variables
+    if env:
+        for key, value in env.items():
+            command.extend(["-e", f"{key}={value}"])
+
     command.extend(
         [
             "--security-opt",
@@ -28,16 +34,30 @@ def run_docker_image(
         ]
     )
 
-    logger.info("Running Docker image: %s", image)
-    logger.debug("Command: %s", " ".join(command))
+    if dry_run:
+        logger.info("Dry run enabled – Docker command not executed")
+        return
 
-    if not dry_run: 
-        subprocess.run(command, check=True)
+    try:
+        logger.info("Try running Docker image: %s", image)
+        result = subprocess.run(
+            command,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        logger.debug("Docker stdout:\n%s", result.stdout)
+        logger.debug("Docker stderr:\n%s", result.stderr)
 
-    # ---- Artifact ----
-    art = "\n".join(f"- `{host}` → `{container}`" for host, container in volumes.items())
-    logger.info(art)
-    logger.info(" Docker task completed successfully ###")
+        art = "\n".join(f"- `{host}` → `{container}`" for host, container in volumes.items())
+        logger.info(art)
+        logger.info("### Docker task completed successfully ###")
+
+    except subprocess.CalledProcessError as e:
+        logger.error("Docker failed with exit code %s", e.returncode)
+        logger.error("Docker stdout:\n%s", e.stdout)
+        logger.error("Docker stderr:\n%s", e.stderr)
+        raise
 
 
 def korona_noisefiltering(
@@ -45,6 +65,7 @@ def korona_noisefiltering(
     preprocessing: Path,
     dry_run: bool = False,
 ):
+    
     return run_docker_image(
         image="acoustic-ek_preprocessing_korona-noisefiltering_blueinsight:local",
         volumes={
@@ -52,6 +73,8 @@ def korona_noisefiltering(
             preprocessing: "/PREPROCESSING",
         },
         artifact_key="korona-noisefiltering",
+        env = None,
+        dry_run = dry_run,
     )
 
 
@@ -67,6 +90,8 @@ def korona_preprocessing(
             preprocessing: "/PREPROCESSING",
         },
         artifact_key="korona-preprocessing",
+        env = None,
+        dry_run = dry_run,
     )
 
 
@@ -84,6 +109,8 @@ def korona_datacompression(
             quality_control: "/QUALITY_CONTROL",
         },
         artifact_key="korona-datacompression",
+        env = None,
+        dry_run = dry_run,
     )
 
 
@@ -99,6 +126,8 @@ def mackerel_korneliussen2016(
             target_classification: "/TARGET_CLASSIFICATION",
         },
         artifact_key="mackerel_korneliussen2016",
+        env = None,
+        dry_run = dry_run,
     )
 
 
@@ -109,7 +138,9 @@ def reportgeneration_zarr(
     reports: Path,
     dry_run: bool = False,
 ):
-    
+    env = {
+        "category": ["1000004", "1000005"],
+    }
     return run_docker_image(
         image="acoustic-ek_reportgeneration-zarr:latest",
         volumes={
@@ -118,5 +149,7 @@ def reportgeneration_zarr(
             reports: "/REPORTS",
         },
         artifact_key="reportgeneration_zarr",
+        env=env,
+        dry_run = dry_run,
     )
 
