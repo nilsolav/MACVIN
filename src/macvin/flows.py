@@ -96,7 +96,8 @@ def survey_flow(
         / Path(
             "REPORTS",
             "korona_preprocessing",
-            "mackerel_korneliussen2016" "reportgeneration-zarr",
+            "mackerel_korneliussen2016",
+            "reportgeneration-zarr",
         ),
         "datacompression": silver_dir
         / Path(

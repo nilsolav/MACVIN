@@ -24,7 +24,9 @@ def run_docker_image(
     # Environment variables
     if env:
         for key, value in env.items():
-            command.extend(["-e", f"{key}={value}"])
+            _env = ["-e", f"{key}={value}"]
+            logger.info(_env)
+            command.extend(_env)
 
     command.extend(
         [
@@ -33,6 +35,10 @@ def run_docker_image(
             image,
         ]
     )
+    logger.debug(command)
+    for host, container in volumes.items():
+        art = f"Mapping : `{host}` → `{container}`"
+        logger.info(art)
 
     if dry_run:
         logger.info("Dry run enabled – Docker command not executed")
@@ -49,8 +55,6 @@ def run_docker_image(
         logger.debug("Docker stdout:\n%s", result.stdout)
         logger.debug("Docker stderr:\n%s", result.stderr)
 
-        art = "\n".join(f"- `{host}` → `{container}`" for host, container in volumes.items())
-        logger.info(art)
         logger.info("### Docker task completed successfully ###")
 
     except subprocess.CalledProcessError as e:
@@ -139,9 +143,11 @@ def reportgeneration_zarr(
     reports: Path,
     dry_run: bool = False,
 ):
-    env = {
-        "category": ["1000004", "1000005"],
-    }
+    env = ({
+        "CATEGORY": '["1000004", "1000005"]',
+        "CRUISE": cruise,
+    })
+
     return run_docker_image(
         image="acoustic-ek_reportgeneration-zarr:latest",
         volumes={
