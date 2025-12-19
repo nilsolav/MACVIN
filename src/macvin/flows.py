@@ -39,7 +39,7 @@ def macvin_full_flow(dry_run: bool = False):
 
 @flow(name="macvin_test_flow")
 def macvin_test_flow(dry_run: bool = True):
-    basedir = Path(os.getenv("CRIMACSCRATCH"))
+    basedir = Path("/data/s3/MACWIN-scratch/")
     cruise = Path("S2005114_PGOSARS_4174")
     bronze_dir = (
         basedir
@@ -109,54 +109,85 @@ def survey_flow(
     }
 
     futures = []
-    logger.info("# 1a. Noise filtering")
-    futures.append(
-        korona_noisefiltering(
-            rawdata=rawdata,
-            preprocessing=preprocessing["noisefiltering"],
-            dry_run=dry_run,
+    try:
+        logger.info("# 1a. Noise filtering")
+        futures.append(
+            korona_noisefiltering(
+                rawdata=rawdata,
+                preprocessing=preprocessing["noisefiltering"],
+                dry_run=dry_run,
+            )
         )
-    )
+    except Exception:
+        # Full traceback goes into Prefect logs
+        logger.exception(
+            "Preprocessing pipeline failed for this case — continuing with next case"
+        )
 
-    logger.info("# 1b. Data compression (use a sub flow since it is 2 steps")
-    futures.append(
-        datacompression_flow(
-            rawdata=rawdata,
-            preprocessing=preprocessing["datacompression"],
-            quality_control=quality_control,
-            dry_run=dry_run,
+    try:
+        logger.info("# 1b. Data compression (use a sub flow since it is 2 steps")
+        futures.append(
+            datacompression_flow(
+                rawdata=rawdata,
+                preprocessing=preprocessing["datacompression"],
+                quality_control=quality_control,
+                dry_run=dry_run,
+            )
         )
-    )
+    except Exception:
+        # Full traceback goes into Prefect logs
+        logger.exception(
+            "Preprocessing pipeline failed for this case — continuing with next case"
+        )
 
-    logger.info("# 1c. Preprocesing")
-    futures.append(
-        korona_preprocessing(
-            rawdata=rawdata,
-            preprocessing=preprocessing["preprocessing"],
-            dry_run=dry_run,
+    try:
+        logger.info("# 1c. Preprocesing")
+        futures.append(
+            korona_preprocessing(
+                rawdata=rawdata,
+                preprocessing=preprocessing["preprocessing"],
+                dry_run=dry_run,
+            )
         )
-    )
+    except Exception:
+        # Full traceback goes into Prefect logs
+        logger.exception(
+            "Preprocessing pipeline failed for this case — continuing with next case"
+        )
 
-    logger.info("# 2. Target classification")
-    futures.append(
-        mackerel_korneliussen2016(
-            rawdata=rawdata,
-            target_classification=target_classification,
-            dry_run=dry_run,
+    try:
+        logger.info("# 2. Target classification")
+        futures.append(
+            mackerel_korneliussen2016(
+                rawdata=rawdata,
+                target_classification=target_classification,
+                dry_run=dry_run,
+            )
         )
-    )
+    except Exception:
+        # Full traceback goes into Prefect logs
+        logger.exception(
+            "Preprocessing pipeline failed for this case — continuing with next case"
+        )
+
 
     logger.info("# 3. Report generation")
     for _type in preprocessing.keys():
-        logger.info(_type)
-        reportgeneration_zarr(
-            preprocessing=preprocessing[_type],
-            target_classification=target_classification,
-            bottom_detection=bottom_detection,
-            cruise = cruise,
-            reports=reports[_type],
-            dry_run=dry_run,
-        )
+        try:
+            logger.info(_type)
+            reportgeneration_zarr(
+                preprocessing=preprocessing[_type],
+                target_classification=target_classification,
+                bottom_detection=bottom_detection,
+                cruise = cruise,
+                reports=reports[_type],
+                dry_run=dry_run,
+            )
+        except Exception:
+            # Full traceback goes into Prefect logs
+            logger.exception(
+                "Preprocessing pipeline failed for this case — continuing with next case"
+            )
 
 
 @flow(name="datacompression_flow")
