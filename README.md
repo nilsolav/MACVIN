@@ -25,6 +25,39 @@ The list of cruises are described here:
 | WS_WORK_files       | LSSS files generated at the workshop                                      |
 | koronaprocessing    | Path to the predictions from the Korona categorization module             |
 
+## Processed data
+
+The processing flow reads the raw acoustic data and preprocess the data using three different steps, then applied Rolf's acosutic target classification (ATC) model. Finally the preprocessed data are combined with ATC annotations and the luf file is written.
+
+These steps are 
+
+| Processing step       | Name                      | Description                                                            |
+|-----------------------|---------------------------|------------------------------------------------------------------------|
+| preprocessing         | korona_noisefiltering     | Applies noise filtering on raw data and cnvert to netcdf               |
+| preprocessing         | korona-preprocessing      | Conversion of raw data to netcdf                                       |
+| preprocessing         | korona-datacompression    | Algorithm to compress raw used on Sounder and then converted to Netcdf |
+| target-classification | mackerel-korneliussen2016 | ATC step                                                               |
+| reportgeneration      | reportgeneration-zarr     | Integration step                                                       |
+
+
+The processed data are stored under `$PROCESSED=/data/s3/MACWIN-scratch/silver/{$CRUISE}/`, where `$CRUISE` is 
+the `cruise` column in [cruise list](cruises.csv).
+
+The results for each task are located in:
+
+└── EK
+    ├── PREPROCESSING
+    │   ├── korona_datacompression
+    │   ├── korona_noisefiltering
+    │   └── korona_preprocessing
+    ├── QUALITY_CONTROL
+    │   └── korona_datacompression
+    ├── REPORTS
+    │   ├── korona_datacompression
+    │   ├── korona_noisefiltering
+    │   └── korona_preprocessing
+    └── TARGET_CLASSIFICATION
+        └── korona_noisefiltering
 
 
 ---
