@@ -44,7 +44,8 @@ The processed data are stored under `$PROCESSED=/data/s3/MACWIN-scratch/silver/{
 the `cruise` column in [cruise list](cruises.csv).
 
 The results for each task are located in:
-
+```
+/data/s3/MACWIN-scratch/silver/{$CRUISE}/
 └── EK
     ├── PREPROCESSING
     │   ├── korona_datacompression
@@ -58,7 +59,7 @@ The results for each task are located in:
     │   └── korona_preprocessing
     └── TARGET_CLASSIFICATION
         └── korona_noisefiltering
-
+```
 
 ---
 
