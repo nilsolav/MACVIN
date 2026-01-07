@@ -19,6 +19,7 @@ dev = [
 [project.scripts]
 macvin-pipeline = "macvin.pipeline:main"
 macvin-test = "macvin.test:main"
+macvin-status = "macvin.status:main"
 
 [tool.uv]
 package = true
