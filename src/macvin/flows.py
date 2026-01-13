@@ -7,69 +7,11 @@ from macvin.tasks import (
     mackerel_korneliussen2016,
     reportgeneration_zarr,
 )
-import os
 import pandas as pd
 from prefect.logging import get_run_logger
 
 
-@flow(name="macvin_full_flow")
-def macvin_full_flow(dry_run: bool = False):
-    
-    logger = get_run_logger()
-    logger.info("#### MACVIN FULL FLOW ####")
-
-    df = pd.read_csv("cruises.csv")[5:]
-
-    basedir = Path("/data/s3/MACWIN-scratch")
-    
-    for idx, row in df.iterrows():
-        cruise = row["cruise"]
-        bronze_dir = Path(row["RAW_files"])
-        silver_dir = (
-            basedir / Path("silver") / cruise / Path("ACOUSTIC", "EK")
-        )
-        
-        logger.info(cruise)
-        logger.info(f"Bronze dir: {bronze_dir}")
-        logger.info(f"Bronze dir is available : {bronze_dir.exists()}")
-        logger.info(f"Silver dir: {silver_dir}")
-        survey_flow(cruise = str(cruise), bronze_dir = bronze_dir,
-                    silver_dir = silver_dir, dry_run = dry_run)
-
-
-@flow(name="macvin_test_flow")
-def macvin_test_flow(dry_run: bool = True):
-    basedir = Path("/data/s3/MACWIN-scratch/")
-    cruise = Path("S2005114_PGOSARS_4174")
-    bronze_dir = (
-        basedir
-        / Path("test_data_azure")
-        / cruise
-        / Path("ACOUSTIC", "EK")
-        / Path("EK_RAWDATA")
-    )
-    silver_dir = (
-        basedir / Path("test_data_azure_silver") / cruise / Path("ACOUSTIC", "EK")
-    )
-
-    survey_flow(
-        cruise=str(cruise),
-        bronze_dir=bronze_dir,
-        silver_dir=silver_dir,
-        dry_run=dry_run,
-    )
-
-
-@flow(name="survey_flow")
-def survey_flow(
-    cruise: str,
-    bronze_dir: Path,
-    silver_dir: Path,
-    dry_run: bool = False,
-):
-    logger = get_run_logger()
-    logger.info(f"#### {cruise} ####")
-    rawdata = bronze_dir
+def get_paths(silver_dir):
     preprocessing = {
         "noisefiltering": silver_dir / Path("PREPROCESSING", "korona_noisefiltering"),
         "preprocessing": silver_dir / Path("PREPROCESSING", "korona_preprocessing"),
@@ -107,6 +49,122 @@ def survey_flow(
             "reportgeneration-zarr",
         ),
     }
+    return (
+        preprocessing,
+        target_classification,
+        quality_control,
+        bottom_detection,
+        reports,
+    )
+
+
+@flow(name="macvin_reports_flow")
+def macvin_reports_flow(dry_run: bool = False):
+    logger = get_run_logger()
+    logger.info("#### MACVIN REPORTS FLOW ####")
+
+    df = pd.read_csv("cruises.csv")[:]
+
+    basedir = Path("/data/s3/MACWIN-scratch")
+
+    for idx, row in df.iterrows():
+        cruise = row["cruise"]
+        bronze_dir = Path(row["RAW_files"])
+        silver_dir = basedir / Path("silver") / cruise / Path("ACOUSTIC", "EK")
+        (
+            preprocessing,
+            target_classification,
+            quality_control,
+            bottom_detection,
+            reports,
+        ) = get_paths(silver_dir)
+        logger.info(cruise)
+        logger.info(f"Bronze dir: {bronze_dir}")
+        logger.info(f"Bronze dir is available : {bronze_dir.exists()}")
+        logger.info(f"Silver dir: {silver_dir}")
+        preprocessing = [preprocessing[1]]
+
+        for _type in preprocessing.keys():
+            try:
+                logger.info(_type)
+                reportgeneration_zarr(
+                    preprocessing=preprocessing[_type],
+                    target_classification=target_classification,
+                    bottom_detection=bottom_detection,
+                    cruise=cruise,
+                    reports=reports[_type],
+                    dry_run=dry_run,
+                )
+            except Exception:
+                # Full traceback goes into Prefect logs
+                logger.exception(
+                    "Preprocessing pipeline failed for this case — continuing with next case"
+                )
+
+
+@flow(name="macvin_full_flow")
+def macvin_full_flow(dry_run: bool = False):
+    logger = get_run_logger()
+    logger.info("#### MACVIN FULL FLOW ####")
+
+    df = pd.read_csv("cruises.csv")[5:]
+
+    basedir = Path("/data/s3/MACWIN-scratch")
+
+    for idx, row in df.iterrows():
+        cruise = row["cruise"]
+        bronze_dir = Path(row["RAW_files"])
+        silver_dir = basedir / Path("silver") / cruise / Path("ACOUSTIC", "EK")
+
+        logger.info(cruise)
+        logger.info(f"Bronze dir: {bronze_dir}")
+        logger.info(f"Bronze dir is available : {bronze_dir.exists()}")
+        logger.info(f"Silver dir: {silver_dir}")
+        survey_flow(
+            cruise=str(cruise),
+            bronze_dir=bronze_dir,
+            silver_dir=silver_dir,
+            dry_run=dry_run,
+        )
+
+
+@flow(name="macvin_test_flow")
+def macvin_test_flow(dry_run: bool = True):
+    basedir = Path("/data/s3/MACWIN-scratch/")
+    cruise = Path("S2005114_PGOSARS_4174")
+    bronze_dir = (
+        basedir
+        / Path("test_data_azure")
+        / cruise
+        / Path("ACOUSTIC", "EK")
+        / Path("EK_RAWDATA")
+    )
+    silver_dir = (
+        basedir / Path("test_data_azure_silver") / cruise / Path("ACOUSTIC", "EK")
+    )
+
+    survey_flow(
+        cruise=str(cruise),
+        bronze_dir=bronze_dir,
+        silver_dir=silver_dir,
+        dry_run=dry_run,
+    )
+
+
+@flow(name="survey_flow")
+def survey_flow(
+    cruise: str,
+    bronze_dir: Path,
+    silver_dir: Path,
+    dry_run: bool = False,
+):
+    logger = get_run_logger()
+    logger.info(f"#### {cruise} ####")
+    rawdata = bronze_dir
+
+    preprocessing, target_classification, quality_control, bottom_detection, reports = (
+        get_paths(silver_dir)
+    )
 
     futures = []
     try:
@@ -170,7 +228,6 @@ def survey_flow(
             "Preprocessing pipeline failed for this case — continuing with next case"
         )
 
-
     logger.info("# 3. Report generation")
     for _type in preprocessing.keys():
         try:
@@ -179,7 +236,7 @@ def survey_flow(
                 preprocessing=preprocessing[_type],
                 target_classification=target_classification,
                 bottom_detection=bottom_detection,
-                cruise = cruise,
+                cruise=cruise,
                 reports=reports[_type],
                 dry_run=dry_run,
             )
