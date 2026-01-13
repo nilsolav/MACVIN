@@ -6,7 +6,6 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "pandas>=2.3.3",
-    "prefect>=3.6.6",
 ]
 
 [dependency-groups]

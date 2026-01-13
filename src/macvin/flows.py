@@ -1,4 +1,3 @@
-from prefect import flow
 from pathlib import Path
 from macvin.tasks import (
     korona_noisefiltering,
@@ -8,7 +7,10 @@ from macvin.tasks import (
     reportgeneration_zarr,
 )
 import pandas as pd
-from prefect.logging import get_run_logger
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_paths(silver_dir):
@@ -58,9 +60,7 @@ def get_paths(silver_dir):
     )
 
 
-@flow(name="macvin_reports_flow")
 def macvin_reports_flow(dry_run: bool = False):
-    logger = get_run_logger()
     logger.info("#### MACVIN REPORTS FLOW ####")
 
     df = pd.read_csv("cruises.csv")[:]
@@ -104,9 +104,7 @@ def macvin_reports_flow(dry_run: bool = False):
                 logger.info(f"Report exists         : {str(reports[_type]).split('/')[-3]}")
 
 
-@flow(name="macvin_full_flow")
 def macvin_full_flow(dry_run: bool = False):
-    logger = get_run_logger()
     logger.info("#### MACVIN FULL FLOW ####")
 
     df = pd.read_csv("cruises.csv")[5:]
@@ -130,7 +128,6 @@ def macvin_full_flow(dry_run: bool = False):
         )
 
 
-@flow(name="macvin_test_flow")
 def macvin_test_flow(dry_run: bool = True):
     basedir = Path("/data/s3/MACWIN-scratch/")
     cruise = Path("S2005114_PGOSARS_4174")
@@ -153,14 +150,12 @@ def macvin_test_flow(dry_run: bool = True):
     )
 
 
-@flow(name="survey_flow")
 def survey_flow(
     cruise: str,
     bronze_dir: Path,
     silver_dir: Path,
     dry_run: bool = False,
 ):
-    logger = get_run_logger()
     logger.info(f"#### {cruise} ####")
     rawdata = bronze_dir
 
@@ -249,14 +244,12 @@ def survey_flow(
             )
 
 
-@flow(name="datacompression_flow")
 def datacompression_flow(
     rawdata: Path,
     preprocessing: Path,
     quality_control: Path,
     dry_run: bool = False,
 ):
-    logger = get_run_logger()
 
     """Two steps for the data compression"""
     logger.info("# 2a. Data compression: raw -> raw")

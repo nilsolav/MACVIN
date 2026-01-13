@@ -1,6 +1,10 @@
 import logging
 from macvin.flows import macvin_full_flow, macvin_reports_flow
 import argparse
+from macvin.logging import setup_logging
+
+setup_logging(log_file="macvin.log")
+logger = logging.getLogger(__name__)
 
 
 def main():

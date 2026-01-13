@@ -1,11 +1,11 @@
-from prefect import task
 from typing import Mapping
 from pathlib import Path
 import subprocess
-from prefect.logging import get_run_logger
+import logging
+
+logger = logging.getLogger(__name__)
 
 
-@task
 def run_docker_image(
     image: str,
     volumes: Mapping[Path, str],
@@ -13,7 +13,6 @@ def run_docker_image(
     env: Mapping[str, str] | None = None,
     dry_run: bool = False,
 ):
-    logger = get_run_logger()
 
     command = ["docker", "run", "--rm"]
 

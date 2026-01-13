@@ -1,12 +1,13 @@
-from prefect import flow
 from pathlib import Path
 import pandas as pd
-from prefect.logging import get_run_logger
+import logging
+from macvin.logging import setup_logging
+
+setup_logging(log_file="macvin.log")
+logger = logging.getLogger(__name__)
 
 
-@flow(name="macvin_get_status")
 def macvin_get_status():
-    logger = get_run_logger()
     logger.info("#### MACVIN STATUS FLOW ####")
 
     df = pd.read_csv("cruises.csv")
