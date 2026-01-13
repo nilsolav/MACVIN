@@ -69,7 +69,6 @@ def macvin_reports_flow(dry_run: bool = False):
 
     for idx, row in df.iterrows():
         cruise = row["cruise"]
-        bronze_dir = Path(row["RAW_files"])
         silver_dir = basedir / Path("silver") / cruise / Path("ACOUSTIC", "EK")
         (
             preprocessing,
@@ -79,27 +78,30 @@ def macvin_reports_flow(dry_run: bool = False):
             reports,
         ) = get_paths(silver_dir)
         logger.info(cruise)
-        logger.info(f"Bronze dir: {bronze_dir}")
-        logger.info(f"Bronze dir is available : {bronze_dir.exists()}")
-        logger.info(f"Silver dir: {silver_dir}")
-        preprocessing = [preprocessing[1]]
 
         for _type in preprocessing.keys():
-            try:
-                logger.info(_type)
-                reportgeneration_zarr(
-                    preprocessing=preprocessing[_type],
-                    target_classification=target_classification,
-                    bottom_detection=bottom_detection,
-                    cruise=cruise,
-                    reports=reports[_type],
-                    dry_run=dry_run,
-                )
-            except Exception:
-                # Full traceback goes into Prefect logs
-                logger.exception(
-                    "Preprocessing pipeline failed for this case — continuing with next case"
-                )
+            # Check if report exists:
+            zreport = reports[_type] / "*_reports.zarr"
+            _zreport = list(zreport.parent.glob(zreport.name))
+
+            if not _zreport:
+                try:
+                    logger.info(f"Report does not exist : {str(reports[_type]).split('/')[-3]}")
+                    reportgeneration_zarr(
+                        preprocessing=preprocessing[_type],
+                        target_classification=target_classification,
+                        bottom_detection=bottom_detection,
+                        cruise=cruise,
+                        reports=reports[_type],
+                        dry_run=dry_run,
+                    )
+                except Exception:
+                    # Full traceback goes into Prefect logs
+                    logger.info(
+                        "Preprocessing pipeline failed for this case — continuing with next case"
+                    )
+            else:
+                logger.info(f"Report exists         : {str(reports[_type]).split('/')[-3]}")
 
 
 @flow(name="macvin_full_flow")

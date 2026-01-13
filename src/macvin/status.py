@@ -29,6 +29,22 @@ def survey_status(silver_dir: Path, logger, cruise):
         "ListUserFile26_.xml",
     )
 
+    # Zarr report
+    zreport = silver_dir / Path(
+        "REPORTS",
+        "korona_noisefiltering",
+        "mackerel_korneliussen2016",
+        "reportgeneration-zarr",
+        "*_reports.zarr",
+    )
+
+    _zreport = list(zreport.parent.glob(zreport.name))
+
+    if _zreport:
+        report_zarr = True
+    else:
+        report_zarr = False
+    
     # sv_nc
     sv_dir = silver_dir / Path(
         "PREPROCESSING",
@@ -45,7 +61,7 @@ def survey_status(silver_dir: Path, logger, cruise):
     labels_nc = len(list(labels_dir.glob("*.nc")))
 
     logger.info(
-        f"Cruise: {cruise}, sv_nc: {sv_nc}, labels_nc: {labels_nc}, luf exist: {report.exists()}"
+        f"Cruise: {cruise}, sv_nc: {sv_nc}, labels_nc: {labels_nc}, report exist: {report_zarr}, luf exist: {report.exists()}"
     )
 
 
