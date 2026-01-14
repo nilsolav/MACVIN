@@ -155,19 +155,32 @@ This installs:
 
 ## ▶️ Running the pipeline
 
-Console scripts are used for data procesing. The main pipeline:
+Console scripts are used for data procesing. Flow runs will appear in the rotating `macvin.log` file.
+
+### macvin-pipeline
+
+The main pipeline. Cruises that are marked as OK in the status column in [cruise list](cruises.csv) will not be rerun. The script is started by:
 
 ```bash
 uv run macvin-pipeline
 ```
 
-Test the pipeline on a test data set:
+Use the dry run option for testing without running the docker steps:
+```bash
+uv run macvin-pipeline  --dry-run
+```
+
+### macvin-test
+
+Run the pipeline on a test data set to test that the processing works:
 
 ```bash
 uv run macvin-test
 ```
 
-Get the data overview:
+### macvin-status
+
+Run this to get data and processing status:
 
 ```bash
 uv run macvin-status
@@ -179,7 +192,6 @@ Run only report generator:
 uv run macvin-reports
 ```
 
-Flow runs will appear in the rotating `macvin.log` file.
 
 ---
 

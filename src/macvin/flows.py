@@ -117,19 +117,23 @@ def macvin_full_flow(dry_run: bool = False):
 
     for idx, row in df.iterrows():
         cruise = row["cruise"]
+        rerun =  row["status"] != "OK"
         bronze_dir = Path(row["RAW_files"])
         silver_dir = basedir / Path("silver") / cruise / Path("ACOUSTIC", "EK")
 
         logger.info(cruise)
-        logger.info(f"Bronze dir: {bronze_dir}")
-        logger.info(f"Bronze dir is available : {bronze_dir.exists()}")
-        logger.info(f"Silver dir: {silver_dir}")
-        survey_flow(
-            cruise=str(cruise),
-            bronze_dir=bronze_dir,
-            silver_dir=silver_dir,
-            dry_run=dry_run,
-        )
+        if rerun:
+            logger.info(f"Bronze dir: {bronze_dir}")
+            logger.info(f"Bronze dir is available : {bronze_dir.exists()}")
+            logger.info(f"Silver dir: {silver_dir}")
+            survey_flow(
+                cruise=str(cruise),
+                bronze_dir=bronze_dir,
+                silver_dir=silver_dir,
+                dry_run=dry_run,
+            )
+        else:
+            logger.info("Cruise is already processed. Remove 'OK' from cruises.csv to rerun processing.")
 
 
 def macvin_test_flow(dry_run: bool = True):

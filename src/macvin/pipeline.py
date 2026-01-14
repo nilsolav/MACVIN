@@ -8,12 +8,14 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    macvin_full_flow()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dry-run", action="store_true")
+    args = parser.parse_args()
+    macvin_full_flow(dry_run=args.dry_run)
 
 
 def reports():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true")
-
     args = parser.parse_args()
     macvin_reports_flow(dry_run=args.dry_run)
