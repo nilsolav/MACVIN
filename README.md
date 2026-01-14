@@ -1,13 +1,11 @@
 # MACVIN
 
-**MACVIN** is a Python project built with **Prefect 3** and **uv** for orchestrating and running MACVIN data pipelines in a clean, reproducible way.
+**MACVIN** is a Python project built **uv** for orchestrating and running MACVIN data pipelines in a clean, reproducible way.
 
 The project uses:
 
-* **Prefect 3** for workflow orchestration
 * **uv** for fast, reproducible dependency management
 * A modern **`src/` layout**
-* Optional integration with **Prefect Cloud**
 
 # Data organsisation
 The list of cruises are described here:
@@ -92,13 +90,22 @@ MACVIN/
 
 # Processing
 
-The project requires acces to dockerized steps.
+The project requires acces to these docker containers:
 
-
-## Korona processing script
-
-Build first the mackerel classifier into a docker image:
 ```bash
+acoustic-ek-reportgeneration-zarr:latest
+acoustic-ek-target_classification-mackerel-korneliussen2016:latest
+acoustic-ek_preprocessing_korona-datacompression_blueinsight:local
+acoustic-ek_preprocessing_korona-noisefiltering_blueinsight:local
+acoustic-ek_preprocessing_korona-preprocessing_blueinsight:local
+```
+
+## Acoustic ek scripts
+
+Build the mackerel classifier and preprocessor scripts docker images:
+```bash
+git clone git@git.imr.no:crimac-wp4-machine-learning/CRIMAC-acoustic-ek
+make <image name>
 ```
 
 ## Report generation
@@ -129,7 +136,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ### 1️⃣ Clone the repository
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/nilsolav/MACVIN
 cd MACVIN
 ```
 
@@ -146,42 +153,35 @@ This installs:
 
 ---
 
-## 🔐 Prefect Cloud authentication
-
-This project is designed to run with **Prefect Cloud**.
-
-Authenticate once:
-
-```bash
-uvx prefect-cloud login --key <YOUR_API_KEY>
-```
-
-Your API key is stored securely in your local Prefect profile
-(`~/.prefect/profiles.toml`) and is **not committed to git**.
-
-Verify:
-
-```bash
-uv run prefect profile ls
-```
-
 ---
 
 ## ▶️ Running the pipeline
 
-The main pipeline is exposed as a console script.
+Console scripts are used for data procesing. The main pipeline:
 
 ```bash
 uv run macvin-pipeline
 ```
 
-You can also run it as a module:
+Test the pipeline on a test data set:
 
 ```bash
-uv run python -m macvin.pipeline
+uv run macvin-test
 ```
 
-Flow runs will appear in the Prefect Cloud UI.
+Get the data overview:
+
+```bash
+uv run macvin-status
+```
+
+Run only report generator:
+
+```bash
+uv run macvin-reports
+```
+
+Flow runs will appear in the rotating `macvin.log` file.
 
 ---
 
@@ -225,31 +225,9 @@ macvin-test = "macvin.test:main"
 
 ---
 
-## ☁️ Prefect deployments (optional)
-
-To deploy the flow to Prefect Cloud:
-
-```bash
-uv run prefect work-pool create macvin-pool --type process
-uv run prefect worker start --pool macvin-pool
-uv run prefect deploy src/macvin/pipeline.py:macvin_flow \
-  --name macvin-local \
-  --pool macvin-pool
-```
-
----
-
-## 🔒 Notes on security
-
-* API keys are **never stored in code**
-* Secrets used by flows should be stored using **Prefect Secret blocks**
-* `.env` files (if used) should be added to `.gitignore`
-
----
 
 ## 📖 Further reading
 
-* Prefect documentation: [https://docs.prefect.io](https://docs.prefect.io)
 * uv documentation: [https://github.com/astral-sh/uv](https://github.com/astral-sh/uv)
 
 ---
