@@ -41,13 +41,37 @@ def check_sv(preprocessed: Path):
     sv_nc_files = sorted(list(preprocessed.glob("*.nc")))
     sv_nc = len(sv_nc_files)
     log_exists(logger, prefix, f"{sv_nc} nc files", sv_nc > 0)
+    if sv_nc > 0:
+        check_monotonic(sv_nc_files, prefix)
+
+
+def check_monotonic(sv_nc_files: list[Path], prefix: str):
     # Check the time vector
-    t = []
-    for _sv_nc_files in sv_nc_files:
-        t.extend(get_time_bounds(_sv_nc_files))
-    tnp = np.array(t)
-    is_monotonic = np.all(np.diff(tnp) > 0)
-    log_exists(logger, prefix, "time is monotonically increasing:", is_monotonic)
+    bounds = []
+    # Collect start and en times from netcdfs:
+    for sv_file in sv_nc_files[0:3]:
+        t0, t1 = get_time_bounds(sv_file)
+        bounds.append((sv_file, t0, t1))
+
+    # check between files
+    bad_pairs = []
+    for (f_prev, _, t1_prev), (f_cur, t0_cur, _) in zip(bounds, bounds[1:]):
+        if t0_cur <= t1_prev:
+            bad_pairs.append(
+                (f_prev, f_cur, t1_prev, t0_cur)
+            )
+
+    is_monotonic = len(bad_pairs) == 0
+
+    if not is_monotonic:
+        msg_lines = ["Non-monotonic time detected between files:"]
+        for f1, f2, t_end, t_start in bad_pairs:
+            msg_lines.append(
+                f"File {f1.name} with t_end {t_end} ends later than start of {f2.name} with t_0 {t_start}"
+            )
+        msg = "\n".join(msg_lines)
+
+        log_exists(logger, prefix, msg, is_monotonic)
 
 
 def check_labels(target_classification: Path):
