@@ -63,8 +63,6 @@ The results for each task are located in:
 
 ## 🚀 Features
 
-* Prefect 3 flows and tasks
-* Cloud-first orchestration (no local server required)
 * Reproducible environments via `uv.lock`
 * Console scripts for running pipelines
 * Clean separation of code, tests, and configuration
