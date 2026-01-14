@@ -49,7 +49,7 @@ def check_monotonic(sv_nc_files: list[Path], prefix: str):
     # Check the time vector
     bounds = []
     # Collect start and en times from netcdfs:
-    for sv_file in sv_nc_files[0:3]:
+    for sv_file in sv_nc_files:
         t0, t1 = get_time_bounds(sv_file)
         bounds.append((sv_file, t0, t1))
 
