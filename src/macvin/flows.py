@@ -79,14 +79,16 @@ def macvin_reports_flow(dry_run: bool = False):
         ) = get_paths(silver_dir)
         logger.info(cruise)
 
-        for _type in preprocessing.keys():
+        for _type in reports.keys():
             # Check if report exists:
             zreport = reports[_type] / "*_reports.zarr"
             _zreport = list(zreport.parent.glob(zreport.name))
 
             if not _zreport:
                 try:
-                    logger.info(f"Report does not exist : {str(reports[_type]).split('/')[-3]}")
+                    logger.info(
+                        f"Report does not exist : {str(reports[_type]).split('/')[-3]}"
+                    )
                     reportgeneration_zarr(
                         preprocessing=preprocessing[_type],
                         target_classification=target_classification,
@@ -101,7 +103,9 @@ def macvin_reports_flow(dry_run: bool = False):
                         "Preprocessing pipeline failed for this case — continuing with next case"
                     )
             else:
-                logger.info(f"Report exists         : {str(reports[_type]).split('/')[-3]}")
+                logger.info(
+                    f"Report exists         : {str(reports[_type]).split('/')[-3]}"
+                )
 
 
 def macvin_full_flow(dry_run: bool = False):
@@ -250,7 +254,6 @@ def datacompression_flow(
     quality_control: Path,
     dry_run: bool = False,
 ):
-
     """Two steps for the data compression"""
     logger.info("# 2a. Data compression: raw -> raw")
     korona_datacompression(

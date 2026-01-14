@@ -13,7 +13,6 @@ def run_docker_image(
     env: Mapping[str, str] | None = None,
     dry_run: bool = False,
 ):
-
     command = ["docker", "run", "--rm"]
 
     for host_path, container_path in volumes.items():
@@ -23,7 +22,7 @@ def run_docker_image(
     if env:
         for key, value in env.items():
             _env = ["-e", f"{key}={value}"]
-            logger.info(_env)
+            logger.debug(_env)
             command.extend(_env)
 
     command.extend(
@@ -36,7 +35,7 @@ def run_docker_image(
     logger.debug(command)
     for host, container in volumes.items():
         art = f"Mapping : `{host}` → `{container}`"
-        logger.info(art)
+        logger.debug(art)
 
     if dry_run:
         logger.info("Dry run enabled – Docker command not executed")
