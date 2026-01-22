@@ -194,7 +194,7 @@ def survey_flow(
     )
 
     futures = []
-
+    notfailed = True
     try:
         logger.info("# 0. idx tools")
         futures.append(
@@ -205,97 +205,105 @@ def survey_flow(
             )
         )
     except Exception:
-        # Full traceback goes into Prefect logs
+        # Full traceback goes intologs
+        notfailed = False
         logger.exception(
             "Fix idx failed for this case — continuing with next case"
         )
 
-    try:
-        logger.info("# 1a. Noise filtering")
-        futures.append(
-            korona_noisefiltering(
-                idxdata=idxdata,
-                rawdata=rawdata,
-                preprocessing=preprocessing["noisefiltering"],
-                dry_run=dry_run,
+    if notfailed:
+        try:
+            logger.info("# 1a. Noise filtering")
+            futures.append(
+                korona_noisefiltering(
+                    idxdata=idxdata,
+                    rawdata=rawdata,
+                    preprocessing=preprocessing["noisefiltering"],
+                    dry_run=dry_run,
+                )
             )
-        )
-    except Exception:
-        # Full traceback goes into Prefect logs
-        logger.exception(
-            "Preprocessing pipeline failed for this case — continuing with next case"
-        )
-
-    try:
-        logger.info("# 1b. Data compression (use a sub flow since it is 2 steps")
-        futures.append(
-            datacompression_flow(
-                idxdata=idxdata,
-                rawdata=rawdata,
-                preprocessing=preprocessing["datacompression"],
-                quality_control=quality_control,
-                dry_run=dry_run,
+        except Exception:
+            # Full traceback goes into logs
+            notfailed = False
+            logger.exception(
+                "Preprocessing pipeline failed for this case — continuing with next case"
             )
-        )
-    except Exception:
-        # Full traceback goes into Prefect logs
-        logger.exception(
-            "Preprocessing pipeline failed for this case — continuing with next case"
-        )
 
-    try:
-        logger.info("# 1c. Preprocesing")
-        futures.append(
-            korona_preprocessing(
-                idxdata=idxdata,
-                rawdata=rawdata,
-                preprocessing=preprocessing["preprocessing"],
-                dry_run=dry_run,
+    if notfailed:
+        try:
+            logger.info("# 1b. Data compression (use a sub flow since it is 2 steps")
+            futures.append(
+                datacompression_flow(
+                    idxdata=idxdata,
+                    rawdata=rawdata,
+                    preprocessing=preprocessing["datacompression"],
+                    quality_control=quality_control,
+                    dry_run=dry_run,
+                )
             )
-        )
-    except Exception:
-        # Full traceback goes into Prefect logs
-        logger.exception(
-            "Preprocessing pipeline failed for this case — continuing with next case"
-        )
-
-    try:
-        logger.info("# 2. Target classification")
-        futures.append(
+        except Exception:
+            # Full traceback goes into Prefect logs
+            notfailed = False
+            logger.exception(
+                "Preprocessing pipeline failed for this case — continuing with next case"
+            )
+    if notfailed:
+        try:
+            logger.info("# 1c. Preprocesing")
+            futures.append(
+                korona_preprocessing(
+                    idxdata=idxdata,
+                    rawdata=rawdata,
+                    preprocessing=preprocessing["preprocessing"],
+                    dry_run=dry_run,
+                )
+            )
+        except Exception:
+            # Full traceback goes into Prefect logs
+            notfailed = False
+            logger.exception(
+                "Preprocessing pipeline failed for this case — continuing with next case"
+            )
+    if notfailed:
+        try:
+            logger.info("# 2. Target classification")
             mackerel_korneliussen2016(
                 idxdata=idxdata,
                 rawdata=rawdata,
                 target_classification=target_classification,
                 dry_run=dry_run,
             )
-        )
-    except Exception:
-        # Full traceback goes into Prefect logs
-        logger.exception(
-            "Preprocessing pipeline failed for this case — continuing with next case"
-        )
-
-    logger.info("# 3. Report generation")
-    for _type in preprocessing.keys():
-        try:
-            logger.info(_type)
-            reportgeneration_zarr(
-                preprocessing=preprocessing[_type],
-                target_classification=target_classification,
-                bottom_detection=bottom_detection,
-                cruise=cruise,
-                reports=reports[_type],
-                dry_run=dry_run,
-            )
-            # Sanity check: Is the report generated?
-            if not dry_run:
-                assert (Path(reports[_type]) / "ListUserFile26_.xml").exists()
 
         except Exception:
             # Full traceback goes into Prefect logs
+            notfailed = False
             logger.exception(
                 "Preprocessing pipeline failed for this case — continuing with next case"
             )
+
+    logger.info("# 3. Report generation")
+    for _type in preprocessing.keys():
+        if notfailed:
+            try:
+                logger.info(_type)
+                reportgeneration_zarr(
+                    preprocessing=preprocessing[_type],
+                    target_classification=target_classification,
+                    bottom_detection=bottom_detection,
+                    cruise=cruise,
+                    reports=reports[_type],
+                    dry_run=dry_run,
+                )
+                # Sanity check: Is the report generated?
+                if not dry_run:
+                    assert (Path(reports[_type]) / "ListUserFile26_.xml").exists()
+
+            except Exception:
+                # Full traceback goes into Prefect logs
+                notfailed = False
+                logger.exception(
+                    "Preprocessing pipeline failed for this case — continuing with next case"
+                )
 
 
 def datacompression_flow(
