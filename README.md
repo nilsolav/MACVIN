@@ -96,6 +96,7 @@ acoustic-ek-target_classification-mackerel-korneliussen2016:latest
 acoustic-ek_preprocessing_korona-datacompression_blueinsight:local
 acoustic-ek_preprocessing_korona-noisefiltering_blueinsight:local
 acoustic-ek_preprocessing_korona-preprocessing_blueinsight:local
+acoustic-ek_preprocessing_korona-fixidx_blueinsight:local
 ```
 
 ## Acoustic ek scripts

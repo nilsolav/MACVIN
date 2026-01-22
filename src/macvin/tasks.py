@@ -15,9 +15,9 @@ def run_docker_image(
 ):
     command = ["docker", "run", "--rm"]
 
-    for host_path, container_path in volumes.items():
+    for container_path, host_path in volumes.items():
         command.extend(["-v", f"{host_path}:{container_path}"])
-
+        logger.debug(f"Mounts: {host_path}:{container_path}")
     # Environment variables
     if env:
         for key, value in env.items():
@@ -62,6 +62,7 @@ def run_docker_image(
 
 
 def korona_noisefiltering(
+    idxdata: Path,
     rawdata: Path,
     preprocessing: Path,
     dry_run: bool = False,
@@ -69,8 +70,9 @@ def korona_noisefiltering(
     return run_docker_image(
         image="acoustic-ek_preprocessing_korona-noisefiltering_blueinsight:local",
         volumes={
-            rawdata: "/RAWDATA",
-            preprocessing: "/PREPROCESSING",
+            "/RAWDATA": rawdata,
+            "/IDX": idxdata,
+            "/PREPROCESSING": preprocessing,
         },
         artifact_key="korona-noisefiltering",
         env=None,
@@ -79,6 +81,7 @@ def korona_noisefiltering(
 
 
 def korona_preprocessing(
+    idxdata: Path,
     rawdata: Path,
     preprocessing: Path,
     dry_run: bool = False,
@@ -86,8 +89,9 @@ def korona_preprocessing(
     return run_docker_image(
         image="acoustic-ek_preprocessing_korona-preprocessing_blueinsight:local",
         volumes={
-            rawdata: "/RAWDATA",
-            preprocessing: "/PREPROCESSING",
+            "/RAWDATA": rawdata,
+            "/IDX": idxdata,
+            "/PREPROCESSING": preprocessing,
         },
         artifact_key="korona-preprocessing",
         env=None,
@@ -96,6 +100,7 @@ def korona_preprocessing(
 
 
 def korona_datacompression(
+    idxdata: Path,
     rawdata: Path,
     preprocessing: Path,
     quality_control: Path,
@@ -104,9 +109,10 @@ def korona_datacompression(
     return run_docker_image(
         image="acoustic-ek_preprocessing_korona-datacompression_blueinsight:local",
         volumes={
-            rawdata: "/RAWDATA",
-            preprocessing: "/PREPROCESSING",
-            quality_control: "/QUALITY_CONTROL",
+            "/RAWDATA": rawdata,
+            "/IDX": idxdata,
+            "/PREPROCESSING": preprocessing,
+            "/QUALITY_CONTROL": quality_control,
         },
         artifact_key="korona-datacompression",
         env=None,
@@ -115,6 +121,7 @@ def korona_datacompression(
 
 
 def mackerel_korneliussen2016(
+    idxdata: Path,
     rawdata: Path,
     target_classification: Path,
     dry_run: bool = False,
@@ -122,8 +129,9 @@ def mackerel_korneliussen2016(
     return run_docker_image(
         image="acoustic-ek_target-classification_mackerel-korneliussen2016_blueinsight:local",
         volumes={
-            rawdata: "/RAWDATA",
-            target_classification: "/TARGET_CLASSIFICATION",
+            "/RAWDATA": rawdata,
+            "/IDX": idxdata,
+            "/TARGET_CLASSIFICATION": target_classification,
         },
         artifact_key="mackerel_korneliussen2016",
         env=None,
@@ -147,9 +155,9 @@ def reportgeneration_zarr(
     return run_docker_image(
         image="acoustic-ek_reportgeneration-zarr:latest",
         volumes={
-            preprocessing: "/PREPROCESSING",
-            target_classification: "/TARGET_CLASSIFICATION",
-            reports: "/REPORTS",
+            "/PREPROCESSING": preprocessing,
+            "/TARGET_CLASSIFICATION": target_classification,
+            "/REPORTS": reports,
         },
         artifact_key="reportgeneration_zarr",
         env=env,

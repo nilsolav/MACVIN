@@ -1,7 +1,6 @@
 from pathlib import Path
 import os
 import xarray as xr
-import zarr
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 

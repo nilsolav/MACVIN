@@ -8,9 +8,13 @@ from macvin.tasks import (
 )
 import pandas as pd
 import logging
-
+import platform
 
 logger = logging.getLogger(__name__)
+
+# ------------------
+# Helper functions
+# ------------------
 
 
 def get_paths(silver_dir):
@@ -58,6 +62,10 @@ def get_paths(silver_dir):
         bottom_detection,
         reports,
     )
+
+# ------------------
+# Main flow functions
+# ------------------
 
 
 def macvin_reports_flow(dry_run: bool = False):
@@ -137,7 +145,11 @@ def macvin_full_flow(dry_run: bool = False):
 
 
 def macvin_test_flow(dry_run: bool = True):
-    basedir = Path("/data/s3/MACWIN-scratch/")
+    if platform.node() == "HI-14667":
+        basedir = Path("/crimac-scratch")
+    else:
+        basedir = Path("/data/s3/MACWIN-scratch/")
+
     cruise = Path("S2005114_PGOSARS_4174")
     bronze_dir = (
         basedir
@@ -145,6 +157,7 @@ def macvin_test_flow(dry_run: bool = True):
         / cruise
         / Path("ACOUSTIC", "EK")
         / Path("EK_RAWDATA")
+        / Path("rawdata")
     )
     silver_dir = (
         basedir / Path("test_data_azure_silver") / cruise / Path("ACOUSTIC", "EK")
@@ -157,6 +170,10 @@ def macvin_test_flow(dry_run: bool = True):
         dry_run=dry_run,
     )
 
+# ------------------
+# Flows per survey
+# ------------------
+
 
 def survey_flow(
     cruise: str,
@@ -166,7 +183,7 @@ def survey_flow(
 ):
     logger.info(f"#### {cruise} ####")
     rawdata = bronze_dir
-
+    idxdata = bronze_dir
     preprocessing, target_classification, quality_control, bottom_detection, reports = (
         get_paths(silver_dir)
     )
@@ -176,6 +193,7 @@ def survey_flow(
         logger.info("# 1a. Noise filtering")
         futures.append(
             korona_noisefiltering(
+                idxdata=idxdata,
                 rawdata=rawdata,
                 preprocessing=preprocessing["noisefiltering"],
                 dry_run=dry_run,
@@ -191,6 +209,7 @@ def survey_flow(
         logger.info("# 1b. Data compression (use a sub flow since it is 2 steps")
         futures.append(
             datacompression_flow(
+                idxdata=idxdata,
                 rawdata=rawdata,
                 preprocessing=preprocessing["datacompression"],
                 quality_control=quality_control,
@@ -207,6 +226,7 @@ def survey_flow(
         logger.info("# 1c. Preprocesing")
         futures.append(
             korona_preprocessing(
+                idxdata=idxdata,
                 rawdata=rawdata,
                 preprocessing=preprocessing["preprocessing"],
                 dry_run=dry_run,
@@ -222,6 +242,7 @@ def survey_flow(
         logger.info("# 2. Target classification")
         futures.append(
             mackerel_korneliussen2016(
+                idxdata=idxdata,
                 rawdata=rawdata,
                 target_classification=target_classification,
                 dry_run=dry_run,
@@ -245,6 +266,10 @@ def survey_flow(
                 reports=reports[_type],
                 dry_run=dry_run,
             )
+            # Sanity check: Is the report generated?
+            if not dry_run:
+                assert (Path(reports[_type]) / "ListUserFile26_.xml").exists()
+
         except Exception:
             # Full traceback goes into Prefect logs
             logger.exception(
@@ -253,6 +278,7 @@ def survey_flow(
 
 
 def datacompression_flow(
+    idxdata: Path,
     rawdata: Path,
     preprocessing: Path,
     quality_control: Path,
@@ -261,6 +287,7 @@ def datacompression_flow(
     """Two steps for the data compression"""
     logger.info("# 2a. Data compression: raw -> raw")
     korona_datacompression(
+        idxdata=idxdata,
         rawdata=rawdata,
         preprocessing=preprocessing / Path("tmp"),
         quality_control=quality_control,
@@ -269,6 +296,7 @@ def datacompression_flow(
 
     logger.info("# 2b. Data preprocessing: raw -> nc")
     korona_preprocessing(
+        idxdata=preprocessing / Path("tmp"),
         rawdata=preprocessing / Path("tmp"),
         preprocessing=preprocessing,
         dry_run=dry_run,
