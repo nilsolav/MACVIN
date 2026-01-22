@@ -5,6 +5,7 @@ from macvin.tasks import (
     korona_datacompression,
     mackerel_korneliussen2016,
     reportgeneration_zarr,
+    korona_fixidx,
 )
 import pandas as pd
 import logging
@@ -18,6 +19,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_paths(silver_dir):
+    idxdata =  silver_dir / Path("EK_RAWDATA", "korona_fixidx")
+
     preprocessing = {
         "noisefiltering": silver_dir / Path("PREPROCESSING", "korona_noisefiltering"),
         "preprocessing": silver_dir / Path("PREPROCESSING", "korona_preprocessing"),
@@ -56,6 +59,7 @@ def get_paths(silver_dir):
         ),
     }
     return (
+        idxdata,
         preprocessing,
         target_classification,
         quality_control,
@@ -79,6 +83,7 @@ def macvin_reports_flow(dry_run: bool = False):
         cruise = row["cruise"]
         silver_dir = basedir / Path("silver") / cruise / Path("ACOUSTIC", "EK")
         (
+            idxdata,
             preprocessing,
             target_classification,
             quality_control,
@@ -183,12 +188,27 @@ def survey_flow(
 ):
     logger.info(f"#### {cruise} ####")
     rawdata = bronze_dir
-    idxdata = bronze_dir
-    preprocessing, target_classification, quality_control, bottom_detection, reports = (
+    idxdata, preprocessing, target_classification, quality_control, bottom_detection, reports = (
         get_paths(silver_dir)
     )
 
     futures = []
+
+    try:
+        logger.info("# 0. idx tools")
+        futures.append(
+            korona_fixidx(
+                idx=rawdata, # Read idx+raw from rawdata
+                preprocessing=idxdata, # Genereate the updated idx files into idxdata
+                dry_run=dry_run,
+            )
+        )
+    except Exception:
+        # Full traceback goes into Prefect logs
+        logger.exception(
+            "Fix idx failed for this case — continuing with next case"
+        )
+
     try:
         logger.info("# 1a. Noise filtering")
         futures.append(

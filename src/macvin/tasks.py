@@ -61,6 +61,23 @@ def run_docker_image(
         raise
 
 
+def korona_fixidx(
+        idx: Path, # Location of idx+raw
+        preprocessing: Path, # Location of updated idx files
+        dry_run: bool = False,
+):
+    return run_docker_image(
+        image="acoustic-ek_preprocessing_korona-fixidx_blueinsight:local",
+        volumes={
+            "/IDX": idx,
+            "/PREPROCESSING": preprocessing,
+        },
+        artifact_key="korona-fixidx",
+        env=None,
+        dry_run=dry_run,
+    )
+
+
 def korona_noisefiltering(
     idxdata: Path,
     rawdata: Path,
@@ -163,3 +180,4 @@ def reportgeneration_zarr(
         env=env,
         dry_run=dry_run,
     )
+
