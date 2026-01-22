@@ -99,15 +99,28 @@ def check_report(report: Path):
     log_exists(logger, prefix, "Luf file exist", luf.exists())
 
 
+def check_idx(idxdata: Path):
+    # labels_nc
+    idxfiles = sorted(list(idxdata.glob("*.idx")))
+    prefix = f"{str(idxdata).split('/')[-7].ljust(strN)} | idxfix                | Directly from raw data "
+    idx = len(idxfiles)
+    log_exists(logger, prefix, f"{idx} idx files", idx > 0)
+
+
 def survey_status(silver_dir: Path, logger, cruise):
     # Get the standard paths
     (
+        idxdata,
         preprocessing,
         target_classification,
         quality_control,
         bottom_detection,
         reports,
     ) = get_paths(silver_dir)
+
+    # Check idx files
+    check_idx(idxdata)
+
     # Check sv_nc
     for _type in preprocessing.keys():
         sv_dir = preprocessing[_type]
