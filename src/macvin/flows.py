@@ -153,8 +153,8 @@ def macvin_test_flow(dry_run: bool = True):
     if platform.node() == "HI-14667":
         basedir = Path("/crimac-scratch")
     else:
-        basedir = Path("/data/s3/MACWIN-scratch/")
-
+        basedir = Path("/data", "crimac-scratch")
+    logger.info(basedir)
     cruise = Path("S2005114_PGOSARS_4174")
     bronze_dir = (
         basedir
@@ -164,10 +164,11 @@ def macvin_test_flow(dry_run: bool = True):
         / Path("EK_RAWDATA")
         / Path("rawdata")
     )
+    logger.info(f"Bronze dir : {bronze_dir}")
     silver_dir = (
         basedir / Path("test_data_azure_silver") / cruise / Path("ACOUSTIC", "EK")
     )
-
+    logger.info(f"Silver dir : {silver_dir}")
     survey_flow(
         cruise=str(cruise),
         bronze_dir=bronze_dir,
