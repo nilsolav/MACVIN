@@ -26,6 +26,3 @@ def macvin_lufreports():
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     macvin_lufreports_flow(dry_run=args.dry_run)
-
-
-    

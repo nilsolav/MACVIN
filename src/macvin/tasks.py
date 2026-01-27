@@ -3,6 +3,7 @@ from pathlib import Path
 import subprocess
 import logging
 from zarr2lufxml import write_acoustic_xml
+import xarray as xr
 
 logger = logging.getLogger(__name__)
 
@@ -14,12 +15,15 @@ def run_zarr2lufxml(
     dry_run: bool = False,
 ):
     if not dry_run:
-        write_acoustic_xml(zarr_report, meta, luf_report)
+        _luf_report = str(luf_report)
+        ds = xr.open_zarr(str(zarr_report))
+        _ds = ds.sel(frequency=200000)
+        write_acoustic_xml(_ds, meta, _luf_report)
 
 
 def run_docker_image(
     image: str,
-    volumes: Mapping[Path, str],
+    volumes: dict[str, str],
     artifact_key: str | None = None,
     env: Mapping[str, str] | None = None,
     dry_run: bool = False,
@@ -73,15 +77,15 @@ def run_docker_image(
 
 
 def korona_fixidx(
-        idx: Path, # Location of idx+raw
-        preprocessing: Path, # Location of updated idx files
-        dry_run: bool = False,
+    idx: Path,  # Location of idx+raw
+    preprocessing: Path,  # Location of updated idx files
+    dry_run: bool = False,
 ):
     return run_docker_image(
         image="acoustic-ek_preprocessing_korona-fixidx_blueinsight:local",
         volumes={
-            "/IDX": idx,
-            "/PREPROCESSING": preprocessing,
+            "/IDX": str(idx),
+            "/PREPROCESSING": str(preprocessing),
         },
         artifact_key="korona-fixidx",
         env=None,
@@ -98,9 +102,9 @@ def korona_noisefiltering(
     return run_docker_image(
         image="acoustic-ek_preprocessing_korona-noisefiltering_blueinsight:local",
         volumes={
-            "/RAWDATA": rawdata,
-            "/IDX": idxdata,
-            "/PREPROCESSING": preprocessing,
+            "/RAWDATA": str(rawdata),
+            "/IDX": str(idxdata),
+            "/PREPROCESSING": str(preprocessing),
         },
         artifact_key="korona-noisefiltering",
         env=None,
@@ -117,9 +121,9 @@ def korona_preprocessing(
     return run_docker_image(
         image="acoustic-ek_preprocessing_korona-preprocessing_blueinsight:local",
         volumes={
-            "/RAWDATA": rawdata,
-            "/IDX": idxdata,
-            "/PREPROCESSING": preprocessing,
+            "/RAWDATA": str(rawdata),
+            "/IDX": str(idxdata),
+            "/PREPROCESSING": str(preprocessing),
         },
         artifact_key="korona-preprocessing",
         env=None,
@@ -137,10 +141,10 @@ def korona_datacompression(
     return run_docker_image(
         image="acoustic-ek_preprocessing_korona-datacompression_blueinsight:local",
         volumes={
-            "/RAWDATA": rawdata,
-            "/IDX": idxdata,
-            "/PREPROCESSING": preprocessing,
-            "/QUALITY_CONTROL": quality_control,
+            "/RAWDATA": str(rawdata),
+            "/IDX": str(idxdata),
+            "/PREPROCESSING": str(preprocessing),
+            "/QUALITY_CONTROL": str(quality_control),
         },
         artifact_key="korona-datacompression",
         env=None,
@@ -157,9 +161,9 @@ def mackerel_korneliussen2016(
     return run_docker_image(
         image="acoustic-ek_target-classification_mackerel-korneliussen2016_blueinsight:local",
         volumes={
-            "/RAWDATA": rawdata,
-            "/IDX": idxdata,
-            "/TARGET_CLASSIFICATION": target_classification,
+            "/RAWDATA": str(rawdata),
+            "/IDX": str(idxdata),
+            "/TARGET_CLASSIFICATION": str(target_classification),
         },
         artifact_key="mackerel_korneliussen2016",
         env=None,
@@ -183,12 +187,11 @@ def reportgeneration_zarr(
     return run_docker_image(
         image="acoustic-ek_reportgeneration-zarr:latest",
         volumes={
-            "/PREPROCESSING": preprocessing,
-            "/TARGET_CLASSIFICATION": target_classification,
-            "/REPORTS": reports,
+            "/PREPROCESSING": str(preprocessing),
+            "/TARGET_CLASSIFICATION": str(target_classification),
+            "/REPORTS": str(reports),
         },
         artifact_key="reportgeneration_zarr",
         env=env,
         dry_run=dry_run,
     )
-

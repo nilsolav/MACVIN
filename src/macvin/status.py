@@ -4,7 +4,6 @@ import logging
 from macvin.logging import setup_logging
 from macvin.flows import get_paths
 import xarray as xr
-import numpy as np
 
 setup_logging(log_file="macvin.log")
 logger = logging.getLogger(__name__)
@@ -57,9 +56,7 @@ def check_monotonic(sv_nc_files: list[Path], prefix: str):
     bad_pairs = []
     for (f_prev, _, t1_prev), (f_cur, t0_cur, _) in zip(bounds, bounds[1:]):
         if t0_cur <= t1_prev:
-            bad_pairs.append(
-                (f_prev, f_cur, t1_prev, t0_cur)
-            )
+            bad_pairs.append((f_prev, f_cur, t1_prev, t0_cur))
 
     is_monotonic = len(bad_pairs) == 0
 

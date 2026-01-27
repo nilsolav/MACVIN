@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_paths(silver_dir):
-    idxdata =  silver_dir / Path("EK_RAWDATA", "korona_fixidx")
+    idxdata = silver_dir / Path("EK_RAWDATA", "korona_fixidx")
 
     preprocessing = {
         "noisefiltering": silver_dir / Path("PREPROCESSING", "korona_noisefiltering"),
@@ -71,10 +71,36 @@ def get_paths(silver_dir):
 
 def luf_parameters():
     meta = {
+        "cruise": "NA",
+        "version_number": "NA",
+        "commit_sha": "NA",
+        "PingAxisInterval": 0.1,
+        "LogValidity": "V",
+        "Type": "C",
+        "Unit": "m2nmi-2",
+        "ChannelDepthInterval": 10,
+        "SvThreshold": -82.0,
         "frequency": 200000,
+        "IntegrationType": "threshold",  # Could also be 'proportion'
+        "threshold": 0.75,
+        "seabed_pad": 10,
+        "Instrument": "ID_F38",
+        "Calibration": "C0",
+        "DataAcquisition": "DA0",
+        "DataProcessing": "DP38",
+        "AC_PingAxisIntervalType": "AC_PingAxisIntervalType_distance",
+        "AC_PingAxisIntervalUnit": "AC_PingAxisIntervalUnit_nmi",
+        "AC_PingAxisIntervalOrigin": "AC_PingAxisIntervalOrigin_start",
+        "TransducerOrientation": "downwards-looking",
+        "category": ["all"],
+        "remove_nan_in_position": False,
+        "Code": "NA",
+        "LocalID": "NA",
     }
 
     return meta
+
+
 # ------------------
 # Main flow functions
 # ------------------
@@ -103,29 +129,30 @@ def macvin_lufreports_flow(dry_run: bool = False):
             zreport = reports[_type] / "*_reports.zarr"
             _zreport = list(zreport.parent.glob(zreport.name))
             meta = luf_parameters()
+            meta["Code"] = cruise
             if _zreport:
                 try:
                     logger.info(
-                        f"{cruise} Re run the luf export for {str(reports[_type]).split('/')[-3]}"
+                        f"{cruise} Run the luf export for {str(reports[_type]).split('/')[-3]}"
                     )
                     luf_report = _zreport[0].parent / "ListUserFile26_.xml"
                     logger.debug(f"luf report file: {luf_report}")
-                    run_zarr2lufxml(zarr_report=_zreport,
-                                    luf_report=luf_report,
-                                    meta = meta,
-                                    dry_run = dry_run,
-                                    )
+                    run_zarr2lufxml(
+                        zarr_report=_zreport[0],
+                        luf_report=luf_report,
+                        meta=meta,
+                        dry_run=dry_run,
+                    )
                 except Exception as e:
                     logger.error(
-                        "{cruise} Preprocessing pipeline failed for {str(reports[_type]).split('/')[-3]}"
+                        "f{cruise} Preprocessing pipeline failed for {str(reports[_type]).split('/')[-3]}"
                     )
-                    logger.debug(e)
+                    logger.error(e)
             else:
                 logger.error(
                     f"{cruise} Zarr report does not exist for {str(reports[_type]).split('/')[-3]}"
                 )
 
-                #                        logger.info(f"Re-generate luf 26 report for {cruise}")
 
 def macvin_reports_flow(dry_run: bool = False):
     logger.info("#### MACVIN REPORTS FLOW ####")
@@ -185,7 +212,7 @@ def macvin_full_flow(dry_run: bool = False):
 
     for idx, row in df.iterrows():
         cruise = row["cruise"]
-        rerun =  row["status"] != "OK"
+        rerun = row["status"] != "OK"
         bronze_dir = Path(row["RAW_files"])
         silver_dir = basedir / Path("silver") / cruise / Path("ACOUSTIC", "EK")
 
@@ -201,7 +228,9 @@ def macvin_full_flow(dry_run: bool = False):
                 dry_run=dry_run,
             )
         else:
-            logger.info("Cruise is already processed. Remove 'OK' from cruises.csv to rerun processing.")
+            logger.info(
+                "Cruise is already processed. Remove 'OK' from cruises.csv to rerun processing."
+            )
 
 
 def macvin_test_flow(dry_run: bool = True):
@@ -231,6 +260,7 @@ def macvin_test_flow(dry_run: bool = True):
         dry_run=dry_run,
     )
 
+
 # ------------------
 # Flows per survey
 # ------------------
@@ -244,9 +274,14 @@ def survey_flow(
 ):
     logger.info(f"#### {cruise} ####")
     rawdata = bronze_dir
-    idxdata, preprocessing, target_classification, quality_control, bottom_detection, reports = (
-        get_paths(silver_dir)
-    )
+    (
+        idxdata,
+        preprocessing,
+        target_classification,
+        quality_control,
+        bottom_detection,
+        reports,
+    ) = get_paths(silver_dir)
 
     futures = []
     notfailed = True
@@ -254,17 +289,15 @@ def survey_flow(
         logger.info("# 0. idx tools")
         futures.append(
             korona_fixidx(
-                idx=rawdata, # Read idx+raw from rawdata
-                preprocessing=idxdata, # Genereate the updated idx files into idxdata
+                idx=rawdata,  # Read idx+raw from rawdata
+                preprocessing=idxdata,  # Genereate the updated idx files into idxdata
                 dry_run=dry_run,
             )
         )
     except Exception:
         # Full traceback goes intologs
         notfailed = False
-        logger.exception(
-            "Fix idx failed for this case — continuing with next case"
-        )
+        logger.exception("Fix idx failed for this case — continuing with next case")
 
     if notfailed:
         try:
