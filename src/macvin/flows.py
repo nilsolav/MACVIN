@@ -6,6 +6,7 @@ from macvin.tasks import (
     mackerel_korneliussen2016,
     reportgeneration_zarr,
     korona_fixidx,
+    run_zarr2lufxml,
 )
 import pandas as pd
 import logging
@@ -67,10 +68,64 @@ def get_paths(silver_dir):
         reports,
     )
 
+
+def luf_parameters():
+    meta = {
+        "frequency": 200000,
+    }
+
+    return meta
 # ------------------
 # Main flow functions
 # ------------------
 
+
+def macvin_lufreports_flow(dry_run: bool = False):
+    logger.info("#### MACVIN REPORTS FLOW ####")
+
+    df = pd.read_csv("cruises.csv")[:]
+
+    basedir = Path("/data/s3/MACWIN-scratch")
+
+    for idx, row in df.iterrows():
+        cruise = row["cruise"]
+        silver_dir = basedir / Path("silver") / cruise / Path("ACOUSTIC", "EK")
+        (
+            idxdata,
+            preprocessing,
+            target_classification,
+            quality_control,
+            bottom_detection,
+            reports,
+        ) = get_paths(silver_dir)
+
+        for _type in reports.keys():
+            zreport = reports[_type] / "*_reports.zarr"
+            _zreport = list(zreport.parent.glob(zreport.name))
+            meta = luf_parameters()
+            if _zreport:
+                try:
+                    logger.info(
+                        f"{cruise} Re run the luf export for {str(reports[_type]).split('/')[-3]}"
+                    )
+                    luf_report = _zreport[0].parent / "ListUserFile26_.xml"
+                    logger.debug(f"luf report file: {luf_report}")
+                    run_zarr2lufxml(zarr_report=_zreport,
+                                    luf_report=luf_report,
+                                    meta = meta,
+                                    dry_run = dry_run,
+                                    )
+                except Exception as e:
+                    logger.error(
+                        "{cruise} Preprocessing pipeline failed for {str(reports[_type]).split('/')[-3]}"
+                    )
+                    logger.debug(e)
+            else:
+                logger.error(
+                    f"{cruise} Zarr report does not exist for {str(reports[_type]).split('/')[-3]}"
+                )
+
+                #                        logger.info(f"Re-generate luf 26 report for {cruise}")
 
 def macvin_reports_flow(dry_run: bool = False):
     logger.info("#### MACVIN REPORTS FLOW ####")

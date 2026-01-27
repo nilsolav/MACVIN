@@ -2,8 +2,19 @@ from typing import Mapping
 from pathlib import Path
 import subprocess
 import logging
+from zarr2lufxml import write_acoustic_xml
 
 logger = logging.getLogger(__name__)
+
+
+def run_zarr2lufxml(
+    zarr_report: Path,
+    luf_report: Path,
+    meta: dict,
+    dry_run: bool = False,
+):
+    if not dry_run:
+        write_acoustic_xml(zarr_report, meta, luf_report)
 
 
 def run_docker_image(

@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "crimac-reportgeneration",
     "dask>=2025.12.0",
     "netcdf4>=1.7.3",
     "pandas>=2.3.3",
@@ -16,6 +17,7 @@ dev = [
     "ipython>=8.37.0",
     "pytest>=9.0.2",
     "ruff>=0.14.9",
+    "ty>=0.0.14",
 ]
 
 [project.scripts]
@@ -23,6 +25,11 @@ macvin-pipeline = "macvin.pipeline:main"
 macvin-test = "macvin.test:main"
 macvin-status = "macvin.status:main"
 macvin-reports = "macvin.pipeline:reports"
+macvin-lufreports = "macvin.pipeline:macvin_lufreports"
+
 
 [tool.uv]
 package = true
+
+[tool.uv.sources]
+crimac-reportgeneration = { git = "ssh://git@git.imr.no/crimac-wp4-machine-learning/CRIMAC-reportgeneration-zarr.git" }
