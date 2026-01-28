@@ -1,5 +1,4 @@
 from pathlib import Path
-import pandas as pd
 import logging
 from macvin.logging import setup_logging
 from macvin.flows import get_paths, get_survey
@@ -12,8 +11,7 @@ logger = logging.getLogger(__name__)
 strN = 25
 
 
-def macvin_get_status(quick_run: bool = Falsecruise: str | None = None):
-
+def macvin_get_status(quick_run: bool = False, cruise: str | None = None):
     logger.info("#### MACVIN STATUS FLOW ####")
 
     df = get_survey(cruise=cruise)
@@ -102,8 +100,8 @@ def check_report(report: Path):
 def check_idx(idxdata: Path):
     # labels_nc
     idxfiles = sorted(list(idxdata.glob("*.idx")))
-    _str1 = "Directly from raw data".ljust(strN+20)
-    _str2 = " idxfix".ljust(strN-2)
+    _str1 = "Directly from raw data".ljust(strN + 20)
+    _str2 = " idxfix".ljust(strN - 2)
     prefix = f"{str(idxdata).split('/')[-5].ljust(strN)} |{_str2}| {_str1}"
     idx = len(idxfiles)
     log_exists(logger, prefix, f"{idx} idx files", idx > 0)
@@ -115,15 +113,17 @@ def check_raw(rawdata: Path):
     rawfiles = sorted(list(rawdata.glob("*.raw")))
     idxfiles = sorted(list(rawdata.glob("*.idx")))
     ek500files = sorted(list(rawdata.glob("*Data")))
-    _str1 = "Raw data type".ljust(strN+20)
-    _str2 = " NA".ljust(strN-2)
-    
+    _str1 = "Raw data type".ljust(strN + 20)
+    _str2 = " NA".ljust(strN - 2)
+
     prefix = f"{str(rawdata).split('/')[-4].ljust(strN)} |{_str2}| {_str1}"
     raw = len(rawfiles)
     idx = len(idxfiles)
     ek500 = len(ek500files)
-    
-    log_exists(logger, prefix, f"{raw} raw, {idx} idx, {ek500} ek500 ", raw+ek500+idx > 0)
+
+    log_exists(
+        logger, prefix, f"{raw} raw, {idx} idx, {ek500} ek500 ", raw + ek500 + idx > 0
+    )
 
 
 def survey_status(silver_dir: Path, bronze_dir: Path, logger, cruise, quick_run):
@@ -134,26 +134,27 @@ def survey_status(silver_dir: Path, bronze_dir: Path, logger, cruise, quick_run)
     check_raw(bronze_dir)
 
     # Check idx files
-    check_idx(path_data['idxdata'])
+    check_idx(path_data["idxdata"])
 
     # Check sv_nc
-    for _type in path_data['preprocessing'].keys():
-        sv_dir = path_data['preprocessing'][_type]
+    for _type in path_data["preprocessing"].keys():
+        sv_dir = path_data["preprocessing"][_type]
         check_sv(sv_dir, quick_run)
 
     # Check atc
-    check_labels(path_data['target_classification'])
+    check_labels(path_data["target_classification"])
 
     # Check reports
-    for _type in path_data['reports'].keys():
-        report = path_data['reports'][_type]
+    for _type in path_data["reports"].keys():
+        report = path_data["reports"][_type]
         check_report(report)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--quick-run", action="store_true")
-    parser.add_argument("--cruise", type=str,
-                        help="Cruise name to process, e.g. S1513S_PSCOTIA_MXHR6")
+    parser.add_argument(
+        "--cruise", type=str, help="Cruise name to process, e.g. S1513S_PSCOTIA_MXHR6"
+    )
     args = parser.parse_args()
     macvin_get_status(quick_run=args.quick_run, cruise=args.cruise)
