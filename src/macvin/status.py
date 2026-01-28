@@ -2,7 +2,7 @@ from pathlib import Path
 import pandas as pd
 import logging
 from macvin.logging import setup_logging
-from macvin.flows import get_paths
+from macvin.flows import get_paths, get_survey
 import xarray as xr
 import argparse
 
@@ -12,10 +12,11 @@ logger = logging.getLogger(__name__)
 strN = 25
 
 
-def macvin_get_status(quick_run: bool = False):
+def macvin_get_status(quick_run: bool = Falsecruise: str | None = None):
+
     logger.info("#### MACVIN STATUS FLOW ####")
 
-    df = pd.read_csv("cruises.csv")
+    df = get_survey(cruise=cruise)
 
     basedir = Path("/data/s3/MACWIN-scratch")
 
@@ -127,37 +128,32 @@ def check_raw(rawdata: Path):
 
 def survey_status(silver_dir: Path, bronze_dir: Path, logger, cruise, quick_run):
     # Get the standard paths
-    (
-        idxdata,
-        preprocessing,
-        target_classification,
-        quality_control,
-        bottom_detection,
-        reports,
-    ) = get_paths(silver_dir)
+    path_data = get_paths(silver_dir)
 
     # Check idx files
     check_raw(bronze_dir)
 
     # Check idx files
-    check_idx(idxdata)
+    check_idx(path_data['idxdata'])
 
     # Check sv_nc
-    for _type in preprocessing.keys():
-        sv_dir = preprocessing[_type]
+    for _type in path_data['preprocessing'].keys():
+        sv_dir = path_data['preprocessing'][_type]
         check_sv(sv_dir, quick_run)
 
     # Check atc
-    check_labels(target_classification)
+    check_labels(path_data['target_classification'])
 
     # Check reports
-    for _type in reports.keys():
-        report = reports[_type]
+    for _type in path_data['reports'].keys():
+        report = path_data['reports'][_type]
         check_report(report)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--quick-run", action="store_true")
+    parser.add_argument("--cruise", type=str,
+                        help="Cruise name to process, e.g. S1513S_PSCOTIA_MXHR6")
     args = parser.parse_args()
-    macvin_get_status(quick_run=args.quick_run)
+    macvin_get_status(quick_run=args.quick_run, cruise=args.cruise)

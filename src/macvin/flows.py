@@ -19,24 +19,27 @@ logger = logging.getLogger(__name__)
 # ------------------
 
 
-def get_paths(silver_dir):
-    idxdata = silver_dir / Path("EK_RAWDATA", "korona_fixidx")
+def get_paths(silver_dir: Path) -> dict:
+    dat = {}
+    dat["idxdata"] = silver_dir / Path("EK_RAWDATA", "korona_fixidx")
 
-    preprocessing = {
+    dat["preprocessing"] = {
         "noisefiltering": silver_dir / Path("PREPROCESSING", "korona_noisefiltering"),
         "preprocessing": silver_dir / Path("PREPROCESSING", "korona_preprocessing"),
         "datacompression": silver_dir / Path("PREPROCESSING", "korona_datacompression"),
     }
 
-    target_classification = silver_dir / Path(
+    dat["target_classification"] = silver_dir / Path(
         "TARGET_CLASSIFICATION",
         "korona_noisefiltering",
         "mackerel_korneliussen2016",
     )
 
-    quality_control = silver_dir / Path("QUALITY_CONTROL", "korona_datacompression")
-    bottom_detection = silver_dir
-    reports = {
+    dat["quality_control"] = silver_dir / Path(
+        "QUALITY_CONTROL", "korona_datacompression"
+    )
+    dat["bottom_detection"] = silver_dir
+    dat["reports"] = {
         "noisefiltering": silver_dir
         / Path(
             "REPORTS",
@@ -59,14 +62,7 @@ def get_paths(silver_dir):
             "reportgeneration-zarr",
         ),
     }
-    return (
-        idxdata,
-        preprocessing,
-        target_classification,
-        quality_control,
-        bottom_detection,
-        reports,
-    )
+    return dat
 
 
 def luf_parameters():
@@ -101,39 +97,86 @@ def luf_parameters():
     return meta
 
 
+def get_survey(cruise: str | None = None) -> pd.DataFrame:
+    """
+    Load the cruises table and optionally filter by cruise name.
+
+    Args:
+        cruise: Exact cruise ID to filter on, e.g. "S1513S_PSCOTIA_MXHR6".
+                If None, returns the full dataframe.
+
+    Raises:
+        ValueError: If a cruise string is given that does not appear in the CSV.
+
+    Returns:
+        A pandas DataFrame containing matching rows.
+    """
+    df = pd.read_csv("cruises.csv")
+
+    if cruise is not None:
+        # Check existence first
+        if cruise not in df["cruise"].values:
+            raise ValueError(f"cruise '{cruise}' not found in cruises.csv")
+
+        # Then filter
+        df = df[df["cruise"] == cruise]
+
+    return df
+
+
 # ------------------
 # Main flow functions
 # ------------------
 
 
-def macvin_lufreports_flow(dry_run: bool = False):
+def macvin_idxprocessing_flow(dry_run: bool = False, cruise: str | None = None):
+    logger.info("#### MACVIN IDXFIX FLOW ####")
+
+    basedir = Path("/data/s3/MACWIN-scratch")
+    df = get_survey(cruise=cruise)
+
+    for idx, row in df.iterrows():
+        cruise = row["cruise"]
+        silver_dir = basedir / Path("silver") / cruise / Path("ACOUSTIC", "EK")
+        path_data = get_paths(silver_dir)
+
+        try:
+            logger.info("# 0. idx tools")
+            logger.info(f"idx tools from {row['RAW_files']} to {path_data['idxdata']}")
+            korona_fixidx(
+                idx=row["RAW_files"],
+                preprocessing=path_data[
+                    "idxdata"
+                ],  # Generate the updated idx files into idxdata
+                dry_run=dry_run,
+            )
+
+        except Exception:
+            # Full traceback goes into logs
+            logger.exception("Fix idx failed for this case — continuing with next case")
+
+
+def macvin_lufreports_flow(dry_run: bool = False, cruise: str | None = None):
     logger.info("#### MACVIN REPORTS FLOW ####")
 
-    df = pd.read_csv("cruises.csv")[:]
+    df = get_survey(cruise=cruise)
 
     basedir = Path("/data/s3/MACWIN-scratch")
 
     for idx, row in df.iterrows():
         cruise = row["cruise"]
         silver_dir = basedir / Path("silver") / cruise / Path("ACOUSTIC", "EK")
-        (
-            idxdata,
-            preprocessing,
-            target_classification,
-            quality_control,
-            bottom_detection,
-            reports,
-        ) = get_paths(silver_dir)
+        path_data = get_paths(silver_dir)
 
-        for _type in reports.keys():
-            zreport = reports[_type] / "*_reports.zarr"
+        for _type in path_data["reports"].keys():
+            zreport = path_data["reports"][_type] / "*_reports.zarr"
             _zreport = list(zreport.parent.glob(zreport.name))
             meta = luf_parameters()
             meta["Code"] = cruise
             if _zreport:
                 try:
                     logger.info(
-                        f"{cruise} Run the luf export for {str(reports[_type]).split('/')[-3]}"
+                        f"{cruise} Run the luf export for {str(path_data['reports'][_type]).split('/')[-3]}"
                     )
                     luf_report = _zreport[0].parent / "ListUserFile26_.xml"
                     logger.debug(f"luf report file: {luf_report}")
@@ -150,46 +193,39 @@ def macvin_lufreports_flow(dry_run: bool = False):
                     logger.error(e)
             else:
                 logger.error(
-                    f"{cruise} Zarr report does not exist for {str(reports[_type]).split('/')[-3]}"
+                    f"{cruise} Zarr report does not exist for {str(path_data['reports'][_type]).split('/')[-3]}"
                 )
 
 
-def macvin_reports_flow(dry_run: bool = False):
+def macvin_reports_flow(dry_run: bool = False, cruise: str | None = None):
     logger.info("#### MACVIN REPORTS FLOW ####")
 
-    df = pd.read_csv("cruises.csv")[:]
+    df = get_survey(cruise=cruise)
 
     basedir = Path("/data/s3/MACWIN-scratch")
-    
+
     for idx, row in df.iterrows():
         cruise = row["cruise"]
         silver_dir = basedir / Path("silver") / cruise / Path("ACOUSTIC", "EK")
-        (
-            idxdata,
-            preprocessing,
-            target_classification,
-            quality_control,
-            bottom_detection,
-            reports,
-        ) = get_paths(silver_dir)
+        path_data = get_paths(silver_dir)
         logger.info(cruise)
 
-        for _type in reports.keys():
+        for _type in path_data["reports"].keys():
             # Check if report exists:
-            zreport = reports[_type] / "*_reports.zarr"
+            zreport = path_data["reports"][_type] / "*_reports.zarr"
             _zreport = list(zreport.parent.glob(zreport.name))
 
             if not _zreport:
                 try:
                     logger.info(
-                        f"Report does not exist : {str(reports[_type]).split('/')[-3]}"
+                        f"Report does not exist : {str(path_data['reports'][_type]).split('/')[-3]}"
                     )
                     reportgeneration_zarr(
-                        preprocessing=preprocessing[_type],
-                        target_classification=target_classification,
-                        bottom_detection=bottom_detection,
+                        preprocessing=path_data["preprocessing"][_type],
+                        target_classification=path_data["target_classification"],
+                        bottom_detection=path_data["bottom_detection"],
                         cruise=cruise,
-                        reports=reports[_type],
+                        reports=path_data["reports"][_type],
                         dry_run=dry_run,
                     )
                 except Exception:
@@ -199,14 +235,14 @@ def macvin_reports_flow(dry_run: bool = False):
                     )
             else:
                 logger.info(
-                    f"Report exists         : {str(reports[_type]).split('/')[-3]}"
+                    f"Report exists         : {str(path_data['reports'][_type]).split('/')[-3]}"
                 )
 
 
-def macvin_preprocessing_flow(dry_run: bool = False):
+def macvin_preprocessing_flow(dry_run: bool = False, cruise: str | None = None):
     logger.info("#### MACVIN FULL FLOW ####")
 
-    df = pd.read_csv("cruises.csv")[5:]
+    df = get_survey(cruise=cruise)
 
     basedir = Path("/data/s3/MACWIN-scratch")
 
@@ -274,39 +310,19 @@ def survey_flow(
 ):
     logger.info(f"#### {cruise} ####")
     rawdata = bronze_dir
-    (
-        idxdata,
-        preprocessing,
-        target_classification,
-        quality_control,
-        bottom_detection,
-        reports,
-    ) = get_paths(silver_dir)
+    path_data = get_paths(silver_dir)
 
     futures = []
     notfailed = True
-    try:
-        logger.info("# 0. idx tools")
-        futures.append(
-            korona_fixidx(
-                idx=rawdata,  # Read idx+raw from rawdata
-                preprocessing=idxdata,  # Genereate the updated idx files into idxdata
-                dry_run=dry_run,
-            )
-        )
-    except Exception:
-        # Full traceback goes intologs
-        notfailed = False
-        logger.exception("Fix idx failed for this case — continuing with next case")
 
     if notfailed:
         try:
             logger.info("# 1a. Noise filtering")
             futures.append(
                 korona_noisefiltering(
-                    idxdata=idxdata,
+                    idxdata=path_data["idxdata"],
                     rawdata=rawdata,
-                    preprocessing=preprocessing["noisefiltering"],
+                    preprocessing=path_data["preprocessing"]["noisefiltering"],
                     dry_run=dry_run,
                 )
             )
@@ -322,10 +338,10 @@ def survey_flow(
             logger.info("# 1b. Data compression (use a sub flow since it is 2 steps")
             futures.append(
                 datacompression_flow(
-                    idxdata=idxdata,
+                    idxdata=path_data["idxdata"],
                     rawdata=rawdata,
-                    preprocessing=preprocessing["datacompression"],
-                    quality_control=quality_control,
+                    preprocessing=path_data["preprocessing"]["datacompression"],
+                    quality_control=path_data["quality_control"],
                     dry_run=dry_run,
                 )
             )
@@ -340,9 +356,9 @@ def survey_flow(
             logger.info("# 1c. Preprocesing")
             futures.append(
                 korona_preprocessing(
-                    idxdata=idxdata,
+                    idxdata=path_data["idxdata"],
                     rawdata=rawdata,
-                    preprocessing=preprocessing["preprocessing"],
+                    preprocessing=path_data["preprocessing"]["preprocessing"],
                     dry_run=dry_run,
                 )
             )
@@ -356,9 +372,9 @@ def survey_flow(
         try:
             logger.info("# 2. Target classification")
             mackerel_korneliussen2016(
-                idxdata=idxdata,
+                idxdata=path_data["idxdata"],
                 rawdata=rawdata,
-                target_classification=target_classification,
+                target_classification=path_data["target_classification"],
                 dry_run=dry_run,
             )
 
