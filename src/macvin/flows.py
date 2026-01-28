@@ -160,7 +160,7 @@ def macvin_reports_flow(dry_run: bool = False):
     df = pd.read_csv("cruises.csv")[:]
 
     basedir = Path("/data/s3/MACWIN-scratch")
-
+    
     for idx, row in df.iterrows():
         cruise = row["cruise"]
         silver_dir = basedir / Path("silver") / cruise / Path("ACOUSTIC", "EK")
@@ -203,7 +203,7 @@ def macvin_reports_flow(dry_run: bool = False):
                 )
 
 
-def macvin_full_flow(dry_run: bool = False):
+def macvin_preprocessing_flow(dry_run: bool = False):
     logger.info("#### MACVIN FULL FLOW ####")
 
     df = pd.read_csv("cruises.csv")[5:]
@@ -368,30 +368,6 @@ def survey_flow(
             logger.exception(
                 "Preprocessing pipeline failed for this case — continuing with next case"
             )
-
-    logger.info("# 3. Report generation")
-    for _type in preprocessing.keys():
-        if notfailed:
-            try:
-                logger.info(_type)
-                reportgeneration_zarr(
-                    preprocessing=preprocessing[_type],
-                    target_classification=target_classification,
-                    bottom_detection=bottom_detection,
-                    cruise=cruise,
-                    reports=reports[_type],
-                    dry_run=dry_run,
-                )
-                # Sanity check: Is the report generated?
-                if not dry_run:
-                    assert (Path(reports[_type]) / "ListUserFile26_.xml").exists()
-
-            except Exception:
-                # Full traceback goes into Prefect logs
-                notfailed = False
-                logger.exception(
-                    "Preprocessing pipeline failed for this case — continuing with next case"
-                )
 
 
 def datacompression_flow(

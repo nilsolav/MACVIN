@@ -1,5 +1,5 @@
 import logging
-from macvin.flows import macvin_full_flow, macvin_reports_flow, macvin_lufreports_flow
+from macvin.flows import macvin_preprocessing_flow, macvin_reports_flow, macvin_lufreports_flow
 import argparse
 from macvin.logging import setup_logging
 
@@ -7,11 +7,11 @@ setup_logging(log_file="macvin.log")
 logger = logging.getLogger(__name__)
 
 
-def main():
+def preprocessing():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
-    macvin_full_flow(dry_run=args.dry_run)
+    macvin_preprocessing_flow(dry_run=args.dry_run)
 
 
 def reports():
@@ -21,7 +21,7 @@ def reports():
     macvin_reports_flow(dry_run=args.dry_run)
 
 
-def macvin_lufreports():
+def lufreports():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()

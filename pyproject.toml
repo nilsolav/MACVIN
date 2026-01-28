@@ -21,11 +21,13 @@ dev = [
 ]
 
 [project.scripts]
-macvin-pipeline = "macvin.pipeline:main"
+
 macvin-test = "macvin.test:main"
 macvin-status = "macvin.status:main"
+macvin-idxprocessing = "macvin.pipeline:idxprocessing"
+macvin-preprocessing = "macvin.pipeline:preprocesing"
 macvin-reports = "macvin.pipeline:reports"
-macvin-lufreports = "macvin.pipeline:macvin_lufreports"
+macvin-lufreports = "macvin.pipeline:lufreports"
 
 
 [tool.uv]

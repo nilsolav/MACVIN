@@ -4,6 +4,7 @@ import logging
 from macvin.logging import setup_logging
 from macvin.flows import get_paths
 import xarray as xr
+import argparse
 
 setup_logging(log_file="macvin.log")
 logger = logging.getLogger(__name__)
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 strN = 25
 
 
-def macvin_get_status():
+def macvin_get_status(quick_run: bool = False):
     logger.info("#### MACVIN STATUS FLOW ####")
 
     df = pd.read_csv("cruises.csv")
@@ -21,7 +22,8 @@ def macvin_get_status():
     for idx, row in df.iterrows():
         cruise = row["cruise"]
         silver_dir = basedir / Path("silver") / cruise / Path("ACOUSTIC", "EK")
-        survey_status(silver_dir, logger, cruise)
+        bronze_dir = Path(row["RAW_files"])
+        survey_status(silver_dir, bronze_dir, logger, cruise, quick_run)
 
 
 def log_exists(logger, prefix, label, exists):
@@ -35,12 +37,12 @@ def get_time_bounds(nc_file, time_name="ping_time"):
     return t[0], t[-1]
 
 
-def check_sv(preprocessed: Path):
+def check_sv(preprocessed: Path, quick_run: bool = False):
     prefix = f"{str(preprocessed).split('/')[-5].ljust(strN)} | preprocessing         | Preprocessing used: {str(preprocessed).split('/')[-1].ljust(strN)}"
     sv_nc_files = sorted(list(preprocessed.glob("*.nc")))
     sv_nc = len(sv_nc_files)
     log_exists(logger, prefix, f"{sv_nc} nc files", sv_nc > 0)
-    if sv_nc > 0:
+    if sv_nc > 0 and not quick_run:
         check_monotonic(sv_nc_files, prefix)
 
 
@@ -99,12 +101,31 @@ def check_report(report: Path):
 def check_idx(idxdata: Path):
     # labels_nc
     idxfiles = sorted(list(idxdata.glob("*.idx")))
-    prefix = f"{str(idxdata).split('/')[-7].ljust(strN)} | idxfix                | Directly from raw data "
+    _str1 = "Directly from raw data".ljust(strN+20)
+    _str2 = " idxfix".ljust(strN-2)
+    prefix = f"{str(idxdata).split('/')[-5].ljust(strN)} |{_str2}| {_str1}"
     idx = len(idxfiles)
     log_exists(logger, prefix, f"{idx} idx files", idx > 0)
 
 
-def survey_status(silver_dir: Path, logger, cruise):
+def check_raw(rawdata: Path):
+    # labels_nc
+    logger.info(rawdata)
+    rawfiles = sorted(list(rawdata.glob("*.raw")))
+    idxfiles = sorted(list(rawdata.glob("*.idx")))
+    ek500files = sorted(list(rawdata.glob("*Data")))
+    _str1 = "Raw data type".ljust(strN+20)
+    _str2 = " NA".ljust(strN-2)
+    
+    prefix = f"{str(rawdata).split('/')[-4].ljust(strN)} |{_str2}| {_str1}"
+    raw = len(rawfiles)
+    idx = len(idxfiles)
+    ek500 = len(ek500files)
+    
+    log_exists(logger, prefix, f"{raw} raw, {idx} idx, {ek500} ek500 ", raw+ek500+idx > 0)
+
+
+def survey_status(silver_dir: Path, bronze_dir: Path, logger, cruise, quick_run):
     # Get the standard paths
     (
         idxdata,
@@ -116,12 +137,15 @@ def survey_status(silver_dir: Path, logger, cruise):
     ) = get_paths(silver_dir)
 
     # Check idx files
+    check_raw(bronze_dir)
+
+    # Check idx files
     check_idx(idxdata)
 
     # Check sv_nc
     for _type in preprocessing.keys():
         sv_dir = preprocessing[_type]
-        check_sv(sv_dir)
+        check_sv(sv_dir, quick_run)
 
     # Check atc
     check_labels(target_classification)
@@ -133,4 +157,7 @@ def survey_status(silver_dir: Path, logger, cruise):
 
 
 def main():
-    macvin_get_status()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--quick-run", action="store_true")
+    args = parser.parse_args()
+    macvin_get_status(quick_run=args.quick_run)
