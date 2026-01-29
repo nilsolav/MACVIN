@@ -66,7 +66,7 @@ def get_paths(silver_dir: Path) -> dict:
 
 
 def luf_parameters():
-    meta = {
+    par = {
         "cruise": "NA",
         "version_number": "NA",
         "commit_sha": "NA",
@@ -88,13 +88,13 @@ def luf_parameters():
         "AC_PingAxisIntervalUnit": "AC_PingAxisIntervalUnit_nmi",
         "AC_PingAxisIntervalOrigin": "AC_PingAxisIntervalOrigin_start",
         "TransducerOrientation": "downwards-looking",
-        "category": ["all"],
+        "category": ['1000004', '1000005'],
         "remove_nan_in_position": False,
         "Code": "NA",
         "LocalID": "NA",
     }
 
-    return meta
+    return par
 
 
 def get_survey(cruise: str | None = None) -> pd.DataFrame:
@@ -171,8 +171,8 @@ def macvin_lufreports_flow(dry_run: bool = False, cruise: str | None = None):
         for _type in path_data["reports"].keys():
             zreport = path_data["reports"][_type] / "*_reports.zarr"
             _zreport = list(zreport.parent.glob(zreport.name))
-            meta = luf_parameters()
-            meta["Code"] = cruise
+            par = luf_parameters()
+            par["Code"] = cruise
             if _zreport:
                 try:
                     logger.info(
@@ -183,7 +183,7 @@ def macvin_lufreports_flow(dry_run: bool = False, cruise: str | None = None):
                     run_zarr2lufxml(
                         zarr_report=_zreport[0],
                         luf_report=luf_report,
-                        meta=meta,
+                        par=par,
                         dry_run=dry_run,
                     )
                 except Exception as e:

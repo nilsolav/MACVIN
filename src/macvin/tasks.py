@@ -11,14 +11,19 @@ logger = logging.getLogger(__name__)
 def run_zarr2lufxml(
     zarr_report: Path,
     luf_report: Path,
-    meta: dict,
+    par: dict,
     dry_run: bool = False,
 ):
     if not dry_run:
         _luf_report = str(luf_report)
-        ds = xr.open_zarr(str(zarr_report))
-        _ds = ds.sel(frequency=200000)
-        write_acoustic_xml(_ds, meta, _luf_report)
+        zr = xr.open_zarr(str(zarr_report))
+        logger.debug(f"The content of the reports.zarr store:\n {zr}")
+        cat = par["category"]
+        if "all" not in cat:
+            zr = zr.assign_coords(category=[str(c) for c in zr.category.values])
+            zr = zr.sel(category=cat, frequency=par["frequency"])
+
+        write_acoustic_xml(zr, par, _luf_report)
 
 
 def run_docker_image(
