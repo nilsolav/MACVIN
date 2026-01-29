@@ -11,6 +11,8 @@ from macvin.tasks import (
 import pandas as pd
 import logging
 import platform
+import os
+import subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +129,37 @@ def get_survey(cruise: str | None = None) -> pd.DataFrame:
 # ------------------
 # Main flow functions
 # ------------------
+
+def macvin_convert_ek500_flow(dry_run: bool = False, cruise: str | None = None):
+    logger.info("#### MACVIN EK500 FLOW ####")
+
+    basedir = Path("/data/s3/MACWIN-scratch")
+    df = get_survey(cruise=cruise)
+
+    for idx, row in df.iterrows():
+        if "BEI" in row["Original_RAW_files"]:
+            cruise = row["cruise"]
+
+            try:
+                logger.info(f"{cruise}: Converting ek 500 data")
+                logger.debug(f"idx tools from {row['Original_RAW_files']} to {row['RAW_files']}")
+                batch = Path(os.getenv("LSSS")) / Path("korona/KoronaCli.sh")
+                cmd = [str(batch),
+                       "batch", #                       "--cfs", str(cfs),
+                       "--max-parallel", str(5),
+                       "--destination", str(row['RAW_files']),
+                       "--source", str(row['Original_RAW_files']),
+                       ]
+                logger.info(cmd)
+                if not dry_run:
+                    subprocess.run(cmd, check=True)
+                    # Rename files etc
+
+            except Exception:
+                # Full traceback goes into logs
+                logger.exception("EK500 conversion failed")
+        else:
+            logger.info(f"{cruise} does not contatin EK 500 data")
 
 
 def macvin_idxprocessing_flow(dry_run: bool = False, cruise: str | None = None):
