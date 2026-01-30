@@ -136,27 +136,6 @@ def korona_preprocessing(
     )
 
 
-def korona_datacompression(
-    idxdata: Path,
-    rawdata: Path,
-    preprocessing: Path,
-    quality_control: Path,
-    dry_run: bool = False,
-):
-    return run_docker_image(
-        image="acoustic-ek_preprocessing_korona-datacompression_blueinsight:local",
-        volumes={
-            "/RAWDATA": str(rawdata),
-            "/IDX": str(idxdata),
-            "/PREPROCESSING": str(preprocessing),
-            "/QUALITY_CONTROL": str(quality_control),
-        },
-        artifact_key="korona-datacompression",
-        env=None,
-        dry_run=dry_run,
-    )
-
-
 def mackerel_korneliussen2016(
     idxdata: Path,
     rawdata: Path,

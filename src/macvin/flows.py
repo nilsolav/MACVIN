@@ -2,7 +2,6 @@ from pathlib import Path
 from macvin.tasks import (
     korona_noisefiltering,
     korona_preprocessing,
-    korona_datacompression,
     mackerel_korneliussen2016,
     reportgeneration_zarr,
     korona_fixidx,
@@ -28,7 +27,6 @@ def get_paths(silver_dir: Path) -> dict:
     dat["preprocessing"] = {
         "noisefiltering": silver_dir / Path("PREPROCESSING", "korona_noisefiltering"),
         "preprocessing": silver_dir / Path("PREPROCESSING", "korona_preprocessing"),
-        "datacompression": silver_dir / Path("PREPROCESSING", "korona_datacompression"),
     }
 
     dat["target_classification"] = silver_dir / Path(
@@ -53,13 +51,6 @@ def get_paths(silver_dir: Path) -> dict:
         / Path(
             "REPORTS",
             "korona_preprocessing",
-            "mackerel_korneliussen2016",
-            "reportgeneration-zarr",
-        ),
-        "datacompression": silver_dir
-        / Path(
-            "REPORTS",
-            "korona_datacompression",
             "mackerel_korneliussen2016",
             "reportgeneration-zarr",
         ),
@@ -389,27 +380,3 @@ def survey_flow(
         )
 
 
-def datacompression_flow(
-    idxdata: Path,
-    rawdata: Path,
-    preprocessing: Path,
-    quality_control: Path,
-    dry_run: bool = False,
-):
-    """Two steps for the data compression"""
-    logger.info("# 2a. Data compression: raw -> raw")
-    korona_datacompression(
-        idxdata=idxdata,
-        rawdata=rawdata,
-        preprocessing=preprocessing / Path("tmp"),
-        quality_control=quality_control,
-        dry_run=dry_run,
-    )
-
-    logger.info("# 2b. Data preprocessing: raw -> nc")
-    korona_preprocessing(
-        idxdata=preprocessing / Path("tmp"),
-        rawdata=preprocessing / Path("tmp"),
-        preprocessing=preprocessing,
-        dry_run=dry_run,
-    )
