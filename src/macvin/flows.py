@@ -124,7 +124,6 @@ def get_survey(cruise: str | None = None) -> pd.DataFrame:
 def macvin_convert_ek500_flow(dry_run: bool = False, cruise: str | None = None):
     logger.info("#### MACVIN EK500 FLOW ####")
 
-    basedir = Path("/data/s3/MACWIN-scratch")
     df = get_survey(cruise=cruise)
 
     for idx, row in df.iterrows():
@@ -136,7 +135,7 @@ def macvin_convert_ek500_flow(dry_run: bool = False, cruise: str | None = None):
                 logger.debug(f"idx tools from {row['Original_RAW_files']} to {row['RAW_files']}")
                 batch = Path(os.getenv("LSSS")) / Path("korona/KoronaCli.sh")
                 cmd = [str(batch),
-                       "batch", #                       "--cfs", str(cfs),
+                       "batch",
                        "--max-parallel", str(5),
                        "--destination", str(row['RAW_files']),
                        "--source", str(row['Original_RAW_files']),
@@ -166,6 +165,11 @@ def macvin_idxprocessing_flow(dry_run: bool = False, cruise: str | None = None):
 
         try:
             logger.info("# 0. idx tools")
+            logger.debug("Removing old idx files.")
+            idx_dir = Path(path_data["idxdata"])
+            for f in idx_dir.glob("*.idx"):
+                f.unlink()
+
             logger.info(f"idx tools from {row['RAW_files']} to {path_data['idxdata']}")
             korona_fixidx(
                 idx=row["RAW_files"],
@@ -181,7 +185,7 @@ def macvin_idxprocessing_flow(dry_run: bool = False, cruise: str | None = None):
 
 
 def macvin_lufreports_flow(dry_run: bool = False, cruise: str | None = None):
-    logger.info("#### MACVIN REPORTS FLOW ####")
+    logger.info("#### MACVIN LUF REPORTS FLOW ####")
 
     df = get_survey(cruise=cruise)
 
@@ -253,7 +257,6 @@ def macvin_reports_flow(dry_run: bool = False, cruise: str | None = None):
                         dry_run=dry_run,
                     )
                 except Exception:
-                    # Full traceback goes into Prefect logs
                     logger.info(
                         "Preprocessing pipeline failed for this case — continuing with next case"
                     )
@@ -294,6 +297,7 @@ def macvin_preprocessing_flow(dry_run: bool = False, cruise: str | None = None):
 
 
 def macvin_test_flow(dry_run: bool = True):
+    logger.info("#### MACVIN TEST PROCESSING FLOW ####")
     if platform.node() == "HI-14667":
         basedir = Path("/crimac-scratch")
     else:

@@ -5,23 +5,27 @@
 The project uses:
 
 * **uv** for fast, reproducible dependency management
-* A modern **`src/` layout**
+* **`src/` layout**
 
 # Data organsisation
 The list of cruises are described here:
 [cruise list](cruises.csv)
 
-| Column              | Description                                                               |
-|---------------------|---------------------------------------------------------------------------|
-| cruiseseries        | Keyword for the dta collection                                            |
-| year                | Year of cruise                                                            |
-| cruise              | ID composed of 'S' + Cruise code + '_P' + Platform name + '_' + Call sign |
-| range               | Range in meters for automated processing                                  |
-| shipname            | Name of the vessel                                                        |
-| RAW_files           | The path to the raw acoustic data                                         |
-| Original_WORK_files | Path to the orginal work files (if exist)                                 |
-| WS_WORK_files       | LSSS files generated at the workshop                                      |
-| koronaprocessing    | Path to the predictions from the Korona categorization module             |
+
+| Column              | Description                                                   |
+|---------------------|---------------------------------------------------------------|
+| cruiseseries        | Keyword for the dta collection                                |
+| Description         | Surey description                                             |
+| status              | OK=Finalized, FAIL=Error with data, not salvagble             |
+| year                | Year of cruise                                                |
+| cruise              | Cruise ID                                                     |
+| range               | Range in meters for automated processing                      |
+| shipname            | Name of the vessel                                            |
+| RAW_files           | The path to the raw acoustic data in EK60/80 format           |
+| Original_RAW_files  | Path to the orginal raw files (typically EK500 files          |
+| Original_WORK_files | Path to the orginal work files (if exist)                     |
+| WS_WORK_files       | LSSS files generated at the workshop                          |
+
 
 ## Processed data
 
@@ -99,15 +103,15 @@ acoustic-ek_preprocessing_korona-preprocessing_blueinsight:local
 acoustic-ek_preprocessing_korona-fixidx_blueinsight:local
 ```
 
-## Acoustic ek scripts
+## Acoustic ek containers
 
-Build the mackerel classifier and preprocessor scripts docker images:
+Build the noisefiltering, preprocessing, datacompression, fixidx, and the mackerel classifier docker images:
 ```bash
 git clone git@git.imr.no:crimac-wp4-machine-learning/CRIMAC-acoustic-ek
 make <image name>
 ```
 
-## Report generation
+## Report generation container
 Build first the report generator as a docker image:
 ```bash
 git clone git@git.imr.no:crimac-wp4-machine-learning/CRIMAC-reportgeneration-zarr.git
@@ -159,7 +163,7 @@ This installs:
 Console scripts are used for data procesing. Flow runs will appear in the rotating `macvin.log` file.
 
 Examples: If cruise is not given, all cruises will be processed, but note that cruises that are marked
-as OK in the status column in [cruise list](cruises.csv) will not be rerun.
+as OK or FAIL in the status column in [cruise list](cruises.csv) will not be rerun.
 ```bash
 uv run macvin-status --quick-run --cruise S1513S_PSCOTIA_MXHR6
 uv run macvin-ek500conversion --dry-run --cruise S1513S_PSCOTIA_MXHR6
