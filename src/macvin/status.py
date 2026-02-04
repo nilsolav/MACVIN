@@ -30,10 +30,11 @@ def log_exists(logger, prefix, label, exists):
     log(f"{prefix} | {label:<18}: {exists}")
 
 
-def get_time_bounds(nc_file, time_name="ping_time"):
+def get_freq_and_time_bounds(nc_file, time_name="ping_time"):
     with xr.open_dataset(nc_file, decode_times=True, chunks={}) as ds:
         t = ds[time_name].values
-    return t[0], t[-1]
+        f = {nc_file: set([int(_f) for _f in ds["frequency"].values])}
+    return t[0], t[-1], f
 
 
 def check_sv(preprocessed: Path, quick_run: bool = False):
@@ -48,10 +49,12 @@ def check_sv(preprocessed: Path, quick_run: bool = False):
 def check_monotonic(sv_nc_files: list[Path], prefix: str):
     # Check the time vector
     bounds = []
+    freq_map = {}
     # Collect start and en times from netcdfs:
     for sv_file in sv_nc_files:
-        t0, t1 = get_time_bounds(sv_file)
+        t0, t1, f = get_freq_and_time_bounds(sv_file)
         bounds.append((sv_file, t0, t1))
+        freq_map[sv_file] = f
 
     # check between files
     bad_pairs = []
@@ -70,6 +73,28 @@ def check_monotonic(sv_nc_files: list[Path], prefix: str):
         msg = "\n".join(msg_lines)
 
         log_exists(logger, prefix, msg, is_monotonic)
+
+    # Check the frequencies are the same in all files
+    baseline_file = max(freq_map, key=lambda k: len(freq_map[k]))
+    baseline = freq_map[baseline_file]
+
+    outliers = {
+        file: freqs
+        for file, freqs in freq_map.items()
+        if freqs != baseline
+    }
+
+    is_frequency_same = len(outliers) == 0
+
+    if not is_frequency_same:
+        msg = (
+            f"Frequencies differ between files.\n"
+            f"Baseline (from {baseline_file}): {sorted(baseline)}\n"
+            f"Problematic files:\n" +
+            "\n".join(f"  {file}: {sorted(freqs)}" for file, freqs in outliers.items())
+        )
+
+    log_exists(logger, prefix, msg, is_frequency_same)
 
 
 def check_labels(target_classification: Path):
