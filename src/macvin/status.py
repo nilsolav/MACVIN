@@ -22,7 +22,8 @@ def macvin_get_status(quick_run: bool = False, cruise: str | None = None):
         cruise = row["cruise"]
         silver_dir = basedir / Path("silver") / cruise / Path("ACOUSTIC", "EK")
         bronze_dir = Path(row["RAW_files"])
-        survey_status(silver_dir, bronze_dir, logger, cruise, quick_run)
+        bronze_ek500_dir = Path(row["Original_RAW_files"])
+        survey_status(silver_dir, bronze_dir, bronze_ek500_dir, logger, cruise, quick_run)
 
 
 def log_exists(logger, prefix, label, exists):
@@ -44,6 +45,7 @@ def check_sv(preprocessed: Path, quick_run: bool = False):
     log_exists(logger, prefix, f"{sv_nc} nc files", sv_nc > 0)
     if sv_nc > 0 and not quick_run:
         check_monotonic(sv_nc_files, prefix)
+    return sv_nc
 
 
 def check_monotonic(sv_nc_files: list[Path], prefix: str):
@@ -103,6 +105,7 @@ def check_labels(target_classification: Path):
     labels_nc = len(labels_nc_files)
     prefix = f"{str(target_classification).split('/')[-6].ljust(strN)} | target_classification | Preprocessing used: korona_noisefiltering    "
     log_exists(logger, prefix, f"{labels_nc} nc files", labels_nc > 0)
+    return {"atc": labels_nc}
 
 
 def check_report(report: Path):
@@ -130,14 +133,15 @@ def check_idx(idxdata: Path):
     prefix = f"{str(idxdata).split('/')[-5].ljust(strN)} |{_str2}| {_str1}"
     idx = len(idxfiles)
     log_exists(logger, prefix, f"{idx} idx files", idx > 0)
+    return {"idx": idx}
 
 
-def check_raw(rawdata: Path):
+def check_raw(rawdata: Path, original_rawdata: Path):
     # labels_nc
     logger.info(rawdata)
     rawfiles = sorted(list(rawdata.glob("*.raw")))
     idxfiles = sorted(list(rawdata.glob("*.idx")))
-    ek500files = sorted(list(rawdata.glob("*Data")))
+    ek500files = sorted(list(original_rawdata.glob("*Data")))
     _str1 = "Raw data type".ljust(strN + 20)
     _str2 = " NA".ljust(strN - 2)
 
@@ -149,25 +153,39 @@ def check_raw(rawdata: Path):
     log_exists(
         logger, prefix, f"{raw} raw, {idx} idx, {ek500} ek500 ", raw + ek500 + idx > 0
     )
+    return {"raw": raw, "idx_orig": idx, "ek500": ek500}
 
 
-def survey_status(silver_dir: Path, bronze_dir: Path, logger, cruise, quick_run):
+def survey_status(silver_dir: Path, bronze_dir: Path, bronze_ek500_dir: Path, logger, cruise, quick_run):
     # Get the standard paths
     path_data = get_paths(silver_dir)
 
     # Check idx files
-    check_raw(bronze_dir)
+    raw = check_raw(bronze_dir, bronze_ek500_dir)
 
     # Check idx files
-    check_idx(path_data["idxdata"])
+    idx = check_idx(path_data["idxdata"])
 
     # Check sv_nc
+    pre = {}
     for _type in path_data["preprocessing"].keys():
         sv_dir = path_data["preprocessing"][_type]
-        check_sv(sv_dir, quick_run)
+        n_nc = check_sv(sv_dir, quick_run)
+        pre[_type] = n_nc
 
     # Check atc
-    check_labels(path_data["target_classification"])
+    atc = check_labels(path_data["target_classification"])
+    logger.debug(f"{raw} {idx} {pre} {atc}")
+    # check number of files
+    if raw["raw"] > idx["idx"]:
+        logger.error(f"There are more raw files ({raw['raw']}) than converted idx files ({idx['idx']}). Something failed in fixidx.")
+
+    for _type in path_data["preprocessing"].keys():
+        if raw["raw"] > pre[_type]:
+            logger.error(f"There are more raw files ({raw['raw']}) than preprocessed files ({pre[_type]}) for the {_type} step.something failed in preprocessing.")
+
+    if raw["raw"] > atc["atc"]:
+        logger.error(f"There are more raw files ({raw['raw']}) than atc files ({atc['atc']}). Something failed in the atc.")
 
     # Check reports
     for _type in path_data["reports"].keys():
