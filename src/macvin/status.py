@@ -33,7 +33,7 @@ def log_exists(logger, prefix, label, exists):
 def get_freq_and_time_bounds(nc_file, time_name="ping_time"):
     with xr.open_dataset(nc_file, decode_times=True, chunks={}) as ds:
         t = ds[time_name].values
-        f = {nc_file: set([int(_f) for _f in ds["frequency"].values])}
+        f = set([int(_f) for _f in ds["frequency"].values])
     return t[0], t[-1], f
 
 
@@ -54,7 +54,7 @@ def check_monotonic(sv_nc_files: list[Path], prefix: str):
     for sv_file in sv_nc_files:
         t0, t1, f = get_freq_and_time_bounds(sv_file)
         bounds.append((sv_file, t0, t1))
-        freq_map[sv_file] = f
+        freq_map[Path(sv_file).name] = f
 
     # check between files
     bad_pairs = []
@@ -94,7 +94,7 @@ def check_monotonic(sv_nc_files: list[Path], prefix: str):
             "\n".join(f"  {file}: {sorted(freqs)}" for file, freqs in outliers.items())
         )
 
-    log_exists(logger, prefix, msg, is_frequency_same)
+        log_exists(logger, prefix, msg, is_frequency_same)
 
 
 def check_labels(target_classification: Path):
