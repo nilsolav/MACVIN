@@ -371,8 +371,7 @@ def survey_flow(
     try:
         logger.info("# 2. Target classification")
         mackerel_korneliussen2016(
-            idxdata=path_data["idxdata"],
-            rawdata=rawdata,
+            preprocessing=path_data["preprocessing"]["preprocessing"],
             target_classification=path_data["target_classification"],
             dry_run=dry_run,
         )

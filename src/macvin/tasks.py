@@ -137,16 +137,14 @@ def korona_preprocessing(
 
 
 def mackerel_korneliussen2016(
-    idxdata: Path,
-    rawdata: Path,
+    preprocessing: Path,
     target_classification: Path,
     dry_run: bool = False,
 ):
     return run_docker_image(
         image="acoustic-ek_target-classification_mackerel-korneliussen2016_blueinsight:local",
         volumes={
-            "/RAWDATA": str(rawdata),
-            "/IDX": str(idxdata),
+            "/PREPROCESSING": str(preprocessing),
             "/TARGET_CLASSIFICATION": str(target_classification),
         },
         artifact_key="mackerel_korneliussen2016",
