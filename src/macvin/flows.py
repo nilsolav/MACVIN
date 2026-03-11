@@ -341,6 +341,23 @@ def survey_flow(
     path_data = get_paths(silver_dir)
 
     try:
+        logger.info("# 0. idx fix")
+
+        korona_fixidx(
+            idx=rawdata,
+            preprocessing=path_data[
+                "idxdata"
+            ],  # Generate the updated idx files into idxdata
+                dry_run=dry_run,
+        )
+
+    except Exception:
+        # Full traceback goes into logs
+        logger.exception(
+            "idx fix pipeline failed for this case — continuing with next case"
+        )
+
+    try:
         logger.info("# 1a. Noise filtering")
         korona_noisefiltering(
             idxdata=path_data["idxdata"],
