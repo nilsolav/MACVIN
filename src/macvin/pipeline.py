@@ -5,6 +5,7 @@ from macvin.flows import (
     macvin_lufreports_flow,
     macvin_idxprocessing_flow,
     macvin_convert_ek500_flow,
+    macvin_atcprocessing_flow,
 )
 import argparse
 from macvin.logging import setup_logging
@@ -42,6 +43,16 @@ def preprocessing():
     )
     args = parser.parse_args()
     macvin_preprocessing_flow(dry_run=args.dry_run, cruise=args.cruise)
+
+
+def atcprocessing():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--cruise", type=str, help="Cruise name to process, e.g. S1513S_PSCOTIA_MXHR6"
+    )
+    args = parser.parse_args()
+    macvin_atcprocessing_flow(dry_run=args.dry_run, cruise=args.cruise)
 
 
 def reports():

@@ -27,6 +27,7 @@ macvin-status = "macvin.status:main"
 macvin-ek500conversion = "macvin.pipeline:ek500conversion"
 macvin-idxprocessing = "macvin.pipeline:idxprocessing"
 macvin-preprocessing = "macvin.pipeline:preprocessing"
+macvin-atcprocessing = "macvin.pipeline:atcprocessing"
 macvin-reports = "macvin.pipeline:reports"
 macvin-lufreports = "macvin.pipeline:lufreports"
 

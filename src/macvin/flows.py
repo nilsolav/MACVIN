@@ -284,9 +284,35 @@ def macvin_preprocessing_flow(dry_run: bool = False, cruise: str | None = None):
             logger.info(f"Bronze dir: {bronze_dir}")
             logger.info(f"Bronze dir is available : {bronze_dir.exists()}")
             logger.info(f"Silver dir: {silver_dir}")
-            survey_flow(
+            preprocessing_flow(
                 cruise=str(cruise),
                 bronze_dir=bronze_dir,
+                silver_dir=silver_dir,
+                dry_run=dry_run,
+            )
+        else:
+            logger.info(
+                f"Cruise is already processed. Remove {row['status']} from cruises.csv to rerun processing."
+            )
+
+
+def macvin_atcprocessing_flow(dry_run: bool = False, cruise: str | None = None):
+    logger.info("#### MACVIN ATCPROCESSING FLOW ####")
+
+    df = get_survey(cruise=cruise)
+
+    basedir = Path("/data/s3/MACWIN-scratch")
+
+    for idx, row in df.iterrows():
+        cruise = row["cruise"]
+        rerun = row["status"] not in ("OK", "FAIL")
+        silver_dir = basedir / Path("silver") / cruise / Path("ACOUSTIC", "EK")
+
+        logger.info(cruise)
+        if rerun:
+            logger.info(f"Silver dir: {silver_dir}")
+            atcprocessing_flow(
+                cruise=str(cruise),
                 silver_dir=silver_dir,
                 dry_run=dry_run,
             )
@@ -317,9 +343,16 @@ def macvin_test_flow(dry_run: bool = True):
         basedir / Path("test_data_azure_silver") / cruise / Path("ACOUSTIC", "EK")
     )
     logger.info(f"Silver dir : {silver_dir}")
-    survey_flow(
+    
+    preprocessing_flow(
         cruise=str(cruise),
         bronze_dir=bronze_dir,
+        silver_dir=silver_dir,
+        dry_run=dry_run,
+    )
+
+    atcprocessing_flow(
+        cruise=str(cruise),
         silver_dir=silver_dir,
         dry_run=dry_run,
     )
@@ -330,7 +363,7 @@ def macvin_test_flow(dry_run: bool = True):
 # ------------------
 
 
-def survey_flow(
+def preprocessing_flow(
     cruise: str,
     bronze_dir: Path,
     silver_dir: Path,
@@ -368,6 +401,16 @@ def survey_flow(
             "Preprocessing pipeline failed for this case — continuing with next case"
         )
 
+
+def atcprocessing_flow(
+    cruise: str,
+    silver_dir: Path,
+    dry_run: bool = False,
+):
+
+    logger.info(f"#### {cruise} ####")
+    path_data = get_paths(silver_dir)
+
     try:
         logger.info("# 2. Target classification")
         mackerel_korneliussen2016(
@@ -379,7 +422,6 @@ def survey_flow(
     except Exception:
         # Full traceback goes into Prefect logs
         logger.exception(
-            "Preprocessing pipeline failed for this case — continuing with next case"
+            "ATC processing pipeline failed for this case — continuing with next case"
         )
-
 

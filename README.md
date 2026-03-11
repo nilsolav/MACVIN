@@ -92,12 +92,13 @@ MACVIN/
 
 # Processing
 
+To convert ek500 data the LSSS system must be installed.
+
 The project requires acces to these docker containers:
 
 ```bash
 acoustic-ek-reportgeneration-zarr:latest
 acoustic-ek-target_classification-mackerel-korneliussen2016:latest
-acoustic-ek_preprocessing_korona-datacompression_blueinsight:local
 acoustic-ek_preprocessing_korona-noisefiltering_blueinsight:local
 acoustic-ek_preprocessing_korona-preprocessing_blueinsight:local
 acoustic-ek_preprocessing_korona-fixidx_blueinsight:local
@@ -105,14 +106,19 @@ acoustic-ek_preprocessing_korona-fixidx_blueinsight:local
 
 ## Acoustic ek containers
 
-Build the noisefiltering, preprocessing, datacompression, fixidx, and the mackerel classifier docker images:
+Build the noisefiltering, preprocessing, fixidx, and the mackerel classifier docker images:
 ```bash
 git clone git@git.imr.no:crimac-wp4-machine-learning/CRIMAC-acoustic-ek
-make <image name>
+make \
+        build-target-classification-mackerel-korneliussen2016 \
+        build-preprocessing-korona-noisefiltering \
+        build-preprocessing-korona-preprocessing \
+        build-preprocessing-korona-fixidx \
+        docker-cleanup
 ```
 
 ## Report generation container
-Build first the report generator as a docker image:
+Build the report generator as a docker image:
 ```bash
 git clone git@git.imr.no:crimac-wp4-machine-learning/CRIMAC-reportgeneration-zarr.git
 docker build --build-arg=commit_sha=$(git rev-parse HEAD) --build-arg=version_number=$(git describe --tags) --tag acoustic-ek-reportgeneration-zarr .
@@ -160,6 +166,15 @@ This installs:
 
 ## ▶️ Running the pipeline
 
+The order of the steps are:
+
+* ek500conversion - converts from Ek500 to EK 60 data (if applicable)
+* idxprocessing - Fix the index files for gaps
+* preprocessing - Converts the EK60 files to NetCDF
+* atcprocessing - Runs the Korona Mackerel classifier
+* reports - Generates the reports from prepocessed files and the atc predictions
+* lufreports - Convert the reports to xml files
+
 Console scripts are used for data procesing. Flow runs will appear in the rotating `macvin.log` file.
 
 Examples: If cruise is not given, all cruises will be processed, but note that cruises that are marked
@@ -169,12 +184,14 @@ uv run macvin-status --quick-run --cruise S1513S_PSCOTIA_MXHR6
 uv run macvin-ek500conversion --dry-run --cruise S1513S_PSCOTIA_MXHR6
 uv run macvin-idxprocessing --dry-run --cruise S1513S_PSCOTIA_MXHR6
 uv run macvin-preprocessing --dry-run --cruise S1513S_PSCOTIA_MXHR6
+uv run macvin-atcprocessing --dry-run --cruise S1513S_PSCOTIA_MXHR6
 uv run macvin-reports --dry-run --cruise S1513S_PSCOTIA_MXHR6
 uv run macvin-lufreports --dry-run --cruise S1513S_PSCOTIA_MXHR6
 uv run macvin-status --quick-run
 uv run macvin-ek500conversion --dry-run
 uv run macvin-idxprocessing --dry-run
 uv run macvin-preprocessing --dry-run
+uv run macvin-atcprocessing --dry-run
 uv run macvin-reports --dry-run
 uv run macvin-lufreports --dry-run
 uv run macvin-test
@@ -201,11 +218,6 @@ Run this to get data and processing status:
 uv run macvin-status
 ```
 
-Run only report generator:
-
-```bash
-uv run macvin-reports
-```
 
 
 ---
