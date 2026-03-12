@@ -12,6 +12,8 @@ import logging
 import platform
 import os
 import subprocess
+import tempfile
+from fnmatch import fnmatch
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +92,7 @@ def luf_parameters():
     return par
 
 
-def get_survey(cruise: str | None = None) -> pd.DataFrame:
+def get_survey(cruise: str | None = None) -> tuple[pd.DataFrame, set]:
     """
     Load the cruises table and optionally filter by cruise name.
 
@@ -105,7 +107,8 @@ def get_survey(cruise: str | None = None) -> pd.DataFrame:
         A pandas DataFrame containing matching rows.
     """
     df = pd.read_csv("cruises.csv")
-
+    exclude_files = set(pd.read_csv("excludefiles.csv")['excluded_files'])
+    
     if cruise is not None:
         # Check existence first
         if cruise not in df["cruise"].values:
@@ -114,7 +117,50 @@ def get_survey(cruise: str | None = None) -> pd.DataFrame:
         # Then filter
         df = df[df["cruise"] == cruise]
 
-    return df
+    return df, exclude_files
+
+
+def _make_filtered_source_dir(
+    source_dir: Path,
+    exclude_names: set[str],
+    pattern: str = "*",
+    link_mode: str = "symlink",  # "symlink" or "hardlink" or "copy"
+) -> Path:
+    """
+    Create a temporary directory containing only links (or copies) to allowed files.
+    Returns the temp dir Path. Caller must keep the TemporaryDirectory alive.
+    """
+    
+    files = list(source_dir.glob("*"))
+    remove = [
+        f for f in files
+        if any(fnmatch(f.name, pat) for pat in exclude_names)
+    ]
+    allowed = [f for f in files if f not in remove]
+    logger.info(f"Total number of files: {len(files)}, and allowed numbers of files {len(allowed)}")
+    
+    if not allowed:
+        raise RuntimeError(f"No files matched {pattern} in {source_dir} after exclusions")
+
+    tmpdir_obj = tempfile.TemporaryDirectory(prefix="ek500_filtered_")
+    tmpdir = Path(tmpdir_obj.name)
+
+    # attach object so it doesn't get GC'd while tmpdir is in use
+    #tmpdir._tmpdir_obj = tmpdir_obj  # type: ignore[attr-defined]
+
+    for src in allowed:
+        dst = tmpdir / src.name
+        if link_mode == "symlink":
+            dst.symlink_to(src)
+        elif link_mode == "hardlink":
+            # requires same filesystem; fails across mounts
+            os.link(src, dst)
+        elif link_mode == "copy":
+            dst.write_bytes(src.read_bytes())
+        else:
+            raise ValueError(f"Unknown link_mode: {link_mode}")
+
+    return tmpdir, tmpdir_obj
 
 
 # ------------------
@@ -124,30 +170,51 @@ def get_survey(cruise: str | None = None) -> pd.DataFrame:
 def macvin_convert_ek500_flow(dry_run: bool = False, cruise: str | None = None):
     logger.info("#### MACVIN EK500 FLOW ####")
 
-    df = get_survey(cruise=cruise)
-
+    df, exclude_files = get_survey(cruise=cruise)
     for idx, row in df.iterrows():
+        cruise = row["cruise"]
         if "BEI" in row["Original_RAW_files"]:
-            cruise = row["cruise"]
 
             try:
                 logger.info(f"{cruise}: Converting ek 500 data")
                 logger.debug(f"idx tools from {row['Original_RAW_files']} to {row['RAW_files']}")
-                batch = Path(os.getenv("LSSS")) / Path("korona/KoronaCli.sh")
-                cmd = [str(batch),
-                       "batch",
-                       "--max-parallel", str(5),
-                       "--destination", str(row['RAW_files']),
-                       "--source", str(row['Original_RAW_files']),
-                       ]
-                logger.info(cmd)
+
+                batch = Path(os.getenv("LSSS")) / "korona/KoronaCli.sh"
+
+                source_dir = Path(row["Original_RAW_files"])
+                dest_dir = Path(row["RAW_files"])
+
+                # Build a curated source dir containing only allowed *.ek5
+                filtered_source, tmpobj = _make_filtered_source_dir(
+                    source_dir=source_dir,
+                    exclude_names=exclude_files,
+                    pattern="*",
+                    link_mode="symlink",
+                )
+
+                cmd = [
+                    str(batch),
+                    "batch",
+                    "--max-parallel", "5",
+                    "--destination", str(dest_dir),
+                    "--source", str(filtered_source),
+                ]
+
+                logger.info("Running: %s", " ".join(cmd))
+
                 if not dry_run:
                     subprocess.run(cmd, check=True)
-                    # Rename files etc
+
+                # Important: keep filtered_source alive until run completes.
+                # The TemporaryDirectory object is attached to filtered_source.
+                # When filtered_source goes out of scope, it will clean up automatically.
 
             except Exception:
-                # Full traceback goes into logs
                 logger.exception("EK500 conversion failed")
+
+            finally:
+                tmpobj.cleanup()
+
         else:
             logger.info(f"{cruise} does not contatin EK 500 data")
 
