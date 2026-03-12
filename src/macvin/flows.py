@@ -223,8 +223,8 @@ def macvin_idxprocessing_flow(dry_run: bool = False, cruise: str | None = None):
     logger.info("#### MACVIN IDXFIX FLOW ####")
 
     basedir = Path("/data/s3/MACWIN-scratch")
-    df = get_survey(cruise=cruise)
-
+    df, exclude_files = get_survey(cruise=cruise)
+    
     for idx, row in df.iterrows():
         cruise = row["cruise"]
         silver_dir = basedir / Path("silver") / cruise / Path("ACOUSTIC", "EK")
@@ -254,8 +254,8 @@ def macvin_idxprocessing_flow(dry_run: bool = False, cruise: str | None = None):
 def macvin_lufreports_flow(dry_run: bool = False, cruise: str | None = None):
     logger.info("#### MACVIN LUF REPORTS FLOW ####")
 
-    df = get_survey(cruise=cruise)
-
+    df, exclude_files = get_survey(cruise=cruise)
+    
     basedir = Path("/data/s3/MACWIN-scratch")
 
     for idx, row in df.iterrows():
@@ -295,8 +295,8 @@ def macvin_lufreports_flow(dry_run: bool = False, cruise: str | None = None):
 def macvin_reports_flow(dry_run: bool = False, cruise: str | None = None):
     logger.info("#### MACVIN REPORTS FLOW ####")
 
-    df = get_survey(cruise=cruise)
-
+    df, exclude_files = get_survey(cruise=cruise)
+    
     basedir = Path("/data/s3/MACWIN-scratch")
 
     for idx, row in df.iterrows():
@@ -336,7 +336,7 @@ def macvin_reports_flow(dry_run: bool = False, cruise: str | None = None):
 def macvin_preprocessing_flow(dry_run: bool = False, cruise: str | None = None):
     logger.info("#### MACVIN PREPROCESSING FLOW ####")
 
-    df = get_survey(cruise=cruise)
+    df, exclude_files = get_survey(cruise=cruise)
 
     basedir = Path("/data/s3/MACWIN-scratch")
 
@@ -366,7 +366,7 @@ def macvin_preprocessing_flow(dry_run: bool = False, cruise: str | None = None):
 def macvin_atcprocessing_flow(dry_run: bool = False, cruise: str | None = None):
     logger.info("#### MACVIN ATCPROCESSING FLOW ####")
 
-    df = get_survey(cruise=cruise)
+    df, exclude_files = get_survey(cruise=cruise)
 
     basedir = Path("/data/s3/MACWIN-scratch")
 

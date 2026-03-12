@@ -14,8 +14,8 @@ strN = 25
 def macvin_get_status(quick_run: bool = False, cruise: str | None = None):
     logger.info("#### MACVIN STATUS FLOW ####")
 
-    df = get_survey(cruise=cruise)
-
+    df, exclude_files = get_survey(cruise=cruise)
+    
     basedir = Path("/data/s3/MACWIN-scratch")
 
     for idx, row in df.iterrows():
