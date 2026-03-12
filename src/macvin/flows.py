@@ -410,6 +410,13 @@ def macvin_test_flow(dry_run: bool = True):
         basedir / Path("test_data_azure_silver") / cruise / Path("ACOUSTIC", "EK")
     )
     logger.info(f"Silver dir : {silver_dir}")
+
+    idxprocessing_flow(
+        cruise=str(cruise),
+        bronze_dir=bronze_dir,
+        silver_dir=silver_dir,
+        dry_run=dry_run,
+    )
     
     preprocessing_flow(
         cruise=str(cruise),
@@ -429,8 +436,7 @@ def macvin_test_flow(dry_run: bool = True):
 # Flows per survey
 # ------------------
 
-
-def preprocessing_flow(
+def idxprocessing_flow(
     cruise: str,
     bronze_dir: Path,
     silver_dir: Path,
@@ -439,7 +445,6 @@ def preprocessing_flow(
     logger.info(f"#### {cruise} ####")
     rawdata = bronze_dir
     path_data = get_paths(silver_dir)
-
     try:
         logger.info("# 0. idx fix")
 
@@ -456,6 +461,18 @@ def preprocessing_flow(
         logger.exception(
             "idx fix pipeline failed for this case — continuing with next case"
         )
+
+
+def preprocessing_flow(
+    cruise: str,
+    bronze_dir: Path,
+    silver_dir: Path,
+    dry_run: bool = False,
+):
+
+    logger.info(f"#### {cruise} ####")
+    rawdata = bronze_dir
+    path_data = get_paths(silver_dir)
 
     try:
         logger.info("# 1a. Noise filtering")
