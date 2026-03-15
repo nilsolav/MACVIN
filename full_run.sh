@@ -51,12 +51,12 @@ uv run macvin-lufreports --cruise "$CRUISE"
 uv run macvin-status --cruise "$CRUISE"
 
 # S2006212_PJOHANHJORT_1019 not complete
-export CRUISE=S2006212_PJOHANHJORT_1019
-uv run macvin-ek500conversion --cruise "$CRUISE"
-uv run macvin-idxprocessing --cruise "$CRUISE"
-uv run macvin-preprocessing --cruise "$CRUISE"
-uv run macvin-atcprocessing --cruise "$CRUISE"
-uv run macvin-reports --cruise "$CRUISE"
-uv run macvin-lufreports --cruise "$CRUISE"
-uv run macvin-status --cruise "$CRUISE"
+#export CRUISE=S2006212_PJOHANHJORT_1019
+#uv run macvin-ek500conversion --cruise "$CRUISE"
+#uv run macvin-idxprocessing --cruise "$CRUISE"
+#uv run macvin-preprocessing --cruise "$CRUISE"
+#uv run macvin-atcprocessing --cruise "$CRUISE"
+#uv run macvin-reports --cruise "$CRUISE"
+#uv run macvin-lufreports --cruise "$CRUISE"
+#uv run macvin-status --cruise "$CRUISE"
 
