@@ -145,103 +145,9 @@ def calculate_dist(sv_pre_f, sv_noise_f, labels_f, dataqc_f, quick_run=True):
         plt.close(fig3)
 
 
-def plot_sv_histogram_comparison(
-    hist1,
-    bin_edges1,
-    hist2,
-    bin_edges2,
-    label1="Dataset 1",
-    label2="Dataset 2",
-    title: str | None = None,
-    xlabel: str = "sv",
-    ylabel: str = "Count",
-    style: str = "step",  # "step" or "bar"
-):
-    """
-    Plot two histograms in the same axes for comparison.
-
-    Parameters
-    ----------
-    hist1, hist2 : array-like
-    bin_edges1, bin_edges2 : array-like
-    style : "step" (recommended) or "bar"
-    """
-
-    fig, ax = plt.subplots(figsize=(8, 5))
-
-    if style == "bar":
-        # Bars (slightly shifted + transparent)
-        width1 = np.diff(bin_edges1)
-        width2 = np.diff(bin_edges2)
-
-        ax.bar(
-            bin_edges1[:-1],
-            hist1,
-            width=width1,
-            align="edge",
-            alpha=0.5,
-            label=label1,
-        )
-
-        ax.bar(
-            bin_edges2[:-1],
-            hist2,
-            width=width2,
-            align="edge",
-            alpha=0.5,
-            label=label2,
-        )
-
-    elif style == "step":
-        # Step plots (better for comparison)
-        centers1 = 0.5 * (bin_edges1[:-1] + bin_edges1[1:])
-        centers2 = 0.5 * (bin_edges2[:-1] + bin_edges2[1:])
-
-        ax.step(centers1, hist1, where="mid", label=label1)
-        ax.step(centers2, hist2, where="mid", label=label2)
-
-    else:
-        raise ValueError("style must be 'step' or 'bar'")
-
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-
-    if title:
-        ax.set_title(title)
-
-    ax.legend()
-    ax.grid(True, alpha=0.3)
-
-    fig.tight_layout()
-    return fig, ax
-
-
-def plot_sv_histogram(
-    hist,
-    bin_edges,
-    title: str | None = None,
-    xlabel: str = "sv",
-    ylabel: str = "Count",
-):
-    """
-    Plot histogram and return matplotlib figure + axis.
-    """
-
-    fig, ax = plt.subplots(figsize=(8, 5))
-
-    widths = np.diff(bin_edges)
-    ax.bar(bin_edges[:-1], hist, width=widths, align="edge")
-
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-
-    if title:
-        ax.set_title(title)
-
-    fig.tight_layout()
-
-    return fig, ax
-
+#
+# Processing functions
+#
 
 def compute_sv_histogram_dask(
     ds_sv: xr.Dataset,
@@ -377,12 +283,20 @@ def bottom_mask_single_freq(
 
 
 def depthtorange(sv):
+    """
+    Adjust bottom depth to range reference.
+    """
+    
     sv["bottom_depth"] = (sv["bottom_depth"] -
                           sv["transducer_draft"] -
                           sv["heave"]
                           )
     return sv
 
+
+#
+# Plotting functions
+#
 
 def plot_sv_with_bottoms(
     sv_ds,
@@ -461,4 +375,75 @@ def plot_sv_with_bottoms(
     fig.colorbar(pcm, ax=ax, label=sv_var)
     fig.autofmt_xdate()
 
+    return fig, ax
+
+
+def plot_sv_histogram_comparison(
+    hist1,
+    bin_edges1,
+    hist2,
+    bin_edges2,
+    label1="Dataset 1",
+    label2="Dataset 2",
+    title: str | None = None,
+    xlabel: str = "sv",
+    ylabel: str = "Count",
+    style: str = "step",  # "step" or "bar"
+):
+    """
+    Plot two histograms in the same axes for comparison.
+
+    Parameters
+    ----------
+    hist1, hist2 : array-like
+    bin_edges1, bin_edges2 : array-like
+    style : "step" (recommended) or "bar"
+    """
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+
+    if style == "bar":
+        # Bars (slightly shifted + transparent)
+        width1 = np.diff(bin_edges1)
+        width2 = np.diff(bin_edges2)
+
+        ax.bar(
+            bin_edges1[:-1],
+            hist1,
+            width=width1,
+            align="edge",
+            alpha=0.5,
+            label=label1,
+        )
+
+        ax.bar(
+            bin_edges2[:-1],
+            hist2,
+            width=width2,
+            align="edge",
+            alpha=0.5,
+            label=label2,
+        )
+
+    elif style == "step":
+        # Step plots (better for comparison)
+        centers1 = 0.5 * (bin_edges1[:-1] + bin_edges1[1:])
+        centers2 = 0.5 * (bin_edges2[:-1] + bin_edges2[1:])
+
+        ax.step(centers1, hist1, where="mid", label=label1)
+        ax.step(centers2, hist2, where="mid", label=label2)
+
+    else:
+        raise ValueError("style must be 'step' or 'bar'")
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+
+    if title:
+        ax.set_title(title)
+
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+    fig.tight_layout()
     return fig, ax
