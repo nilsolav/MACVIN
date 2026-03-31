@@ -3,7 +3,9 @@ import logging
 import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
-from macvin.flows import get_survey
+from macvin.flows import (
+    get_survey, get_paths
+)
 import dask.array as da
 import os
 
@@ -30,7 +32,7 @@ def macvin_consistency_flow(
         sv_noise_f = dat / Path("PREPROCESSING/korona_noisefiltering/sv_nc/")
         labels_f = dat / Path("TARGET_CLASSIFICATION/korona_noisefiltering/"
                               "mackerel_korneliussen2016/labels_nc/")
-        dataqc_f = results / Path("QUALITY_CONTROL/macvin")
+        dataqc_f = results / Path("QUALITY_CONTROL/sv_histograms")
         dataqc_f.mkdir(parents=True, exist_ok=True)
 
         logger.info(sv_pre_f)
@@ -39,10 +41,37 @@ def macvin_consistency_flow(
         logger.info(dataqc_f)
 
     else:
+        basedir = Path("/data/s3/MACWIN-scratch")
         df, exclude_files = get_survey(cruise=cruise)
-        logger.info('test2')
 
-    calculate_dist(sv_pre_f, sv_noise_f, labels_f, dataqc_f, quick_run)
+        for idx, row in df.iterrows():
+            cruise = row["cruise"]
+            silver_dir = basedir / Path("silver") / cruise / Path(
+                "ACOUSTIC", "EK")
+            path_data = get_paths(silver_dir)
+
+            df, exclude_files = get_survey(cruise=cruise)
+
+            labels_f = path_data["target_classification"]
+            sv_noise_f = path_data["preprocessing"]["noisefiltering"]
+            sv_pre_f = path_data["preprocessing"]["preprocessing"]
+            dataqc_f = path_data["sv_histograms"]
+            dataqc_f.mkdir(parents=True, exist_ok=True)
+
+            logger.info(f"Create sv histograms for {cruise}")
+            logger.info(sv_pre_f)
+            logger.info(sv_noise_f)
+            logger.info(labels_f)
+            logger.info(dataqc_f)
+
+            if not dry_run:
+                calculate_dist(sv_pre_f,
+                               sv_noise_f,
+                               labels_f,
+                               dataqc_f,
+                               quick_run)
+            else:
+                logger.info("Dry run")
 
 
 def calculate_dist(sv_pre_f, sv_noise_f, labels_f, dataqc_f, quick_run=True):
@@ -81,6 +110,10 @@ def calculate_dist(sv_pre_f, sv_noise_f, labels_f, dataqc_f, quick_run=True):
         bins=100,
     )
 
+    # Store only histogram
+    res1["hist"].to_netcdf(str(dataqc_f / Path(
+        "sv_mackerel_histogram_with_bottomfilter.nc")))
+
     # Histogram without filtering on bottom
     res2 = compute_sv_histogram_dask(
         ds_sv=sv_pre,
@@ -92,56 +125,60 @@ def calculate_dist(sv_pre_f, sv_noise_f, labels_f, dataqc_f, quick_run=True):
     )
 
     # Store only histogram
+    res2["hist"].to_netcdf(str(dataqc_f / Path(
+        "sv_mackerel_histogram_without_bottomfilter.nc")))
 
-    # Plot figures
-    fig1, ax = plot_sv_with_bottoms(
-        sv_ds=sv_noise,
-        bottom_ds_1=sv_pre,
-        bottom_ds_2=sv_noise,
-        frequency=38000,
-        label_1="bottom from sv_pre",
-        label_2="bottom from sv_noise",
-        cmap="inferno",
-        robust=True,
-    )
-
-    fig1.savefig("sv.png", dpi=300, bbox_inches="tight")
-    
-    sv_noise["sv"] = 10**(res1["sv_masked"].expand_dims(
-        frequency=[38000.0])/10)
-    
-    fig2, ax = plot_sv_with_bottoms(
-        sv_ds=sv_noise,
-        bottom_ds_1=sv_pre,
-        bottom_ds_2=sv_noise,
-        frequency=38000,
-        label_1="bottom from sv_pre",
-        label_2="bottom from sv_noise",
-        cmap="inferno",
-        robust=True,
-    )
-
-    fig2.savefig(str(dataqc_f / Path("sv_mackerel.png")),
-                 dpi=300, bbox_inches="tight")
-
+    # Plot the histograms
     fig3, ax = plot_sv_histogram_comparison(
         res1["hist"],
-        res1["bin_edges"],
         res2["hist"],
-        res2["bin_edges"],
         label1="Mackerel Sv without bottom",
         label2="Mackerel Sv",
         title="Sv histogram comparison (38 kHz)",
+        style="step",
     )
 
-    fig3.savefig(str(dataqc_f / Path("sv_histogram.png")),
+    fig3.savefig(str(dataqc_f / Path("Sv_mackerel_histogram.png")),
                  dpi=150)
 
     if quick_run:  # Only plot figures in quick run mode
+    
+        # Plot figures
+        fig1, ax = plot_sv_with_bottoms(
+            sv_ds=sv_noise,
+            bottom_ds_1=sv_pre,
+            bottom_ds_2=sv_noise,
+            frequency=38000,
+            label_1="bottom from sv_pre",
+            label_2="bottom from sv_noise",
+            cmap="inferno",
+            robust=True,
+        )
+
+        # Plot all sv
+        fig1.savefig(str(dataqc_f / Path("Sv.png")),
+                     dpi=300, bbox_inches="tight")
+
+        # Remove and plot Sv that is not Mackerel
+        sv_noise["sv"] = 10**(res1["sv_masked"].expand_dims(
+            frequency=[38000.0])/10)
+    
+        fig2, ax = plot_sv_with_bottoms(
+            sv_ds=sv_noise,
+            bottom_ds_1=sv_pre,
+            bottom_ds_2=sv_noise,
+            frequency=38000,
+            label_1="bottom from sv_pre",
+            label_2="bottom from sv_noise",
+            cmap="inferno",
+            robust=True,
+        )
+
+        fig2.savefig(str(dataqc_f / Path("Sv_mackerel.png")),
+                     dpi=300, bbox_inches="tight")
+
         plt.show()
     else:
-        plt.close(fig1)
-        plt.close(fig2)
         plt.close(fig3)
 
 
@@ -176,8 +213,8 @@ def compute_sv_histogram_dask(
 
     # Convert to Sv
     ds_sv = ds_sv.copy()
-    ds_sv["sv"] = 10 * np.log10(ds_sv["sv"])
-
+    ds_sv["sv"] = 10 * np.log10(ds_sv["sv"].clip(min=1e-10))
+    
     # Select one frequency
     sv = ds_sv["sv"].sel(frequency=frequency, method=method)
 
@@ -228,9 +265,32 @@ def compute_sv_histogram_dask(
     # Only compute the small outputs
     hist, bin_edges = da.compute(hist_da, bin_edges_da)
 
+    sv_hist = xr.Dataset(
+        {
+            "hist": (["bin"], hist),
+            "bin_edges": (["bin_edge"], bin_edges),
+        }
+    )
+
+    bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+
+    sv_hist = xr.Dataset(
+        {
+            "hist": (["bin"], hist),
+            "bin_bounds": (["bin", "bounds"],
+                           np.column_stack([bin_edges[:-1],
+                                            bin_edges[1:]])),
+        },
+        coords={
+            "bin": bin_centers,
+        }
+    )
+    sv_hist["bin"].attrs["bounds"] = "bin_bounds"
+    sv_hist["bin"].attrs["long_name"] = "Sv"
+    sv_hist["bin"].attrs["units"] = "dB"
+
     return {
-        "hist": hist,
-        "bin_edges": bin_edges,
+        "hist": sv_hist,
         "sv_masked": sv_masked,
         "combined_mask": combined_mask,
     }
@@ -379,62 +439,116 @@ def plot_sv_with_bottoms(
 
 
 def plot_sv_histogram_comparison(
-    hist1,
-    bin_edges1,
-    hist2,
-    bin_edges2,
-    label1="Dataset 1",
-    label2="Dataset 2",
+    ds1: xr.Dataset,
+    ds2: xr.Dataset,
+    hist_var: str = "hist",
+    bin_dim: str = "bin",
+    bounds_dim: str = "bounds",
+    label1: str = "Dataset 1",
+    label2: str = "Dataset 2",
     title: str | None = None,
-    xlabel: str = "sv",
+    xlabel: str | None = None,
     ylabel: str = "Count",
     style: str = "step",  # "step" or "bar"
 ):
     """
-    Plot two histograms in the same axes for comparison.
+    Plot two CF-compliant histogram datasets in the same axes.
 
-    Parameters
-    ----------
-    hist1, hist2 : array-like
-    bin_edges1, bin_edges2 : array-like
-    style : "step" (recommended) or "bar"
+    Expected dataset structure
+    --------------------------
+    Each dataset must contain:
+      - ds[hist_var] with dims (bin_dim,)
+      - ds[bin_dim] coordinate with bin centers
+      - ds[bin_dim].attrs["bounds"] naming the bounds variable
+      - ds[bounds_var] with dims (bin_dim, bounds_dim), where size(bounds_dim) == 2
     """
 
     fig, ax = plt.subplots(figsize=(8, 5))
 
-    if style == "bar":
-        # Bars (slightly shifted + transparent)
-        width1 = np.diff(bin_edges1)
-        width2 = np.diff(bin_edges2)
+    def _extract_plot_data(ds: xr.Dataset):
+        if hist_var not in ds:
+            raise ValueError(f"{hist_var!r} not found in dataset.")
 
+        if bin_dim not in ds.coords:
+            raise ValueError(f"Coordinate {bin_dim!r} not found in dataset.")
+
+        hist = ds[hist_var]
+        centers = ds[bin_dim]
+
+        if hist.dims != (bin_dim,):
+            raise ValueError(
+                f"{hist_var!r} must have dims ({bin_dim!r},), got {hist.dims}."
+            )
+
+        bounds_name = centers.attrs.get("bounds")
+        if bounds_name is None:
+            raise ValueError(
+                f"Coordinate {bin_dim!r} is missing attrs['bounds']."
+            )
+
+        if bounds_name not in ds:
+            raise ValueError(
+                f"Bounds variable {bounds_name!r} referenced by {bin_dim!r} "
+                f"not found in dataset."
+            )
+
+        bounds = ds[bounds_name]
+
+        expected_dims = (bin_dim, bounds_dim)
+        if bounds.dims != expected_dims:
+            raise ValueError(
+                f"Bounds variable {bounds_name!r} must have dims "
+                f"{expected_dims}, got {bounds.dims}."
+            )
+
+        if bounds.sizes[bounds_dim] != 2:
+            raise ValueError(
+                f"Bounds variable {bounds_name!r} must have size 2 along "
+                f"{bounds_dim!r}."
+            )
+
+        left = bounds.isel({bounds_dim: 0}).values
+        right = bounds.isel({bounds_dim: 1}).values
+
+        return {
+            "hist": hist.values,
+            "centers": centers.values,
+            "left": left,
+            "right": right,
+        }
+
+    d1 = _extract_plot_data(ds1)
+    d2 = _extract_plot_data(ds2)
+
+    if style == "bar":
         ax.bar(
-            bin_edges1[:-1],
-            hist1,
-            width=width1,
+            d1["left"],
+            d1["hist"],
+            width=d1["right"] - d1["left"],
             align="edge",
             alpha=0.5,
             label=label1,
         )
-
         ax.bar(
-            bin_edges2[:-1],
-            hist2,
-            width=width2,
+            d2["left"],
+            d2["hist"],
+            width=d2["right"] - d2["left"],
             align="edge",
             alpha=0.5,
             label=label2,
         )
 
     elif style == "step":
-        # Step plots (better for comparison)
-        centers1 = 0.5 * (bin_edges1[:-1] + bin_edges1[1:])
-        centers2 = 0.5 * (bin_edges2[:-1] + bin_edges2[1:])
-
-        ax.step(centers1, hist1, where="mid", label=label1)
-        ax.step(centers2, hist2, where="mid", label=label2)
+        ax.step(d1["centers"], d1["hist"], where="mid", label=label1)
+        ax.step(d2["centers"], d2["hist"], where="mid", label=label2)
 
     else:
         raise ValueError("style must be 'step' or 'bar'")
+
+    if xlabel is None:
+        long_name = ds1[bin_dim].attrs.get("long_name", bin_dim)
+        units = ds1[bin_dim].attrs.get("units")
+        xlabel = f"{long_name} [{units}]" if units else long_name
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -444,6 +558,5 @@ def plot_sv_histogram_comparison(
 
     ax.legend()
     ax.grid(True, alpha=0.3)
-
     fig.tight_layout()
     return fig, ax

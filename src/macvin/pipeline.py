@@ -80,7 +80,7 @@ def lufreports():
 def checkconsistency():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true")
-    parser.add_argument("--quick-run", action="store_true", default=True)
+    parser.add_argument("--quick-run", action="store_true", default=False)
     parser.add_argument(
         "--cruise", type=str, help="Cruise name to check, e.g. S1513S_PSCOTIA_MXHR6"
     )

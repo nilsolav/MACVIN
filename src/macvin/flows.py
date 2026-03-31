@@ -40,6 +40,10 @@ def get_paths(silver_dir: Path) -> dict:
     dat["quality_control"] = silver_dir / Path(
         "QUALITY_CONTROL", "korona_datacompression"
     )
+    dat["sv_histograms"] = silver_dir / Path(
+        "QUALITY_CONTROL", "sv_histograms"
+    )
+
     dat["bottom_detection"] = silver_dir
     dat["reports"] = {
         "noisefiltering": silver_dir
