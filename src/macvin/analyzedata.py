@@ -40,6 +40,12 @@ def macvin_consistency_flow(
         logger.info(labels_f)
         logger.info(dataqc_f)
 
+        calculate_dist(sv_pre_f,
+                       sv_noise_f,
+                       labels_f,
+                       dataqc_f,
+                       quick_run)
+
     else:
         basedir = Path("/data/s3/MACWIN-scratch")
         df, exclude_files = get_survey(cruise=cruise)
@@ -80,21 +86,22 @@ def calculate_dist(sv_pre_f, sv_noise_f, labels_f, dataqc_f, quick_run=True):
     chunks = {"frequency": 1, "ping_time": 2048}
 
     sv_pre = (xr.open_mfdataset(str(sv_pre_f)+"/*.nc",
-                                chunks=chunks,
+                                chunks="auto",
                                 combine="by_coords")
                 .sortby("frequency")
               )
+    logger.info(sv_pre["sv"].encoding.get("chunksizes"))
     sv_pre = depthtorange(sv_pre)
 
     sv_noise = (xr.open_mfdataset(str(sv_noise_f)+"/*.nc",
-                                  chunks = chunks,
+                                  chunks = "auto",
                                   combine="by_coords")
                 .sortby("frequency")
                 )
     sv_noise = depthtorange(sv_noise)
 
     labels = xr.open_mfdataset(str(labels_f)+"/*.nc",
-                               chunks=chunks,
+                               chunks="auto",
                                combine="by_coords")
 
     # Create bottom mask
