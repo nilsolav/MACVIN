@@ -30,6 +30,7 @@ macvin-preprocessing = "macvin.pipeline:preprocessing"
 macvin-atcprocessing = "macvin.pipeline:atcprocessing"
 macvin-reports = "macvin.pipeline:reports"
 macvin-lufreports = "macvin.pipeline:lufreports"
+macvin-checkconsistency = "macvin.pipeline:checkconsistency"
 
 
 [tool.uv]

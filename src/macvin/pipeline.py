@@ -7,6 +7,8 @@ from macvin.flows import (
     macvin_convert_ek500_flow,
     macvin_atcprocessing_flow,
 )
+from macvin.analyzedata import macvin_consistency_flow
+
 import argparse
 from macvin.logging import setup_logging
 
@@ -73,3 +75,19 @@ def lufreports():
     )
     args = parser.parse_args()
     macvin_lufreports_flow(dry_run=args.dry_run, cruise=args.cruise)
+
+    
+def checkconsistency():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--quick-run", action="store_true", default=True)
+    parser.add_argument(
+        "--cruise", type=str, help="Cruise name to check, e.g. S1513S_PSCOTIA_MXHR6"
+    )
+    args = parser.parse_args()
+    print(args)
+    macvin_consistency_flow(
+        dry_run=args.dry_run,
+        cruise=args.cruise,
+        quick_run=args.quick_run
+    )
