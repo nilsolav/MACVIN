@@ -109,20 +109,10 @@ acoustic-ek_preprocessing_korona-fixidx_blueinsight:local
 Build the noisefiltering, preprocessing, fixidx, and the mackerel classifier docker images:
 ```bash
 git clone git@git.imr.no:crimac-wp4-machine-learning/CRIMAC-acoustic-ek
-make \
-        build-target-classification-mackerel-korneliussen2016 \
-        build-preprocessing-korona-noisefiltering \
-        build-preprocessing-korona-preprocessing \
-        build-preprocessing-korona-fixidx \
-        docker-cleanup
+make build-all \
+	docker-cleanup
 ```
 
-## Report generation container
-Build the report generator as a docker image:
-```bash
-git clone git@git.imr.no:crimac-wp4-machine-learning/CRIMAC-reportgeneration-zarr.git
-docker build --build-arg=commit_sha=$(git rev-parse HEAD) --build-arg=version_number=$(git describe --tags) --tag acoustic-ek-reportgeneration-zarr .
-```
 
 
 ---
@@ -217,8 +207,6 @@ Run this to get data and processing status:
 ```bash
 uv run macvin-status
 ```
-
-
 
 ---
 

@@ -3,7 +3,7 @@ from macvin.tasks import (
     korona_noisefiltering,
     korona_preprocessing,
     mackerel_korneliussen2016,
-    reportgeneration_zarr,
+    sv_echo_integrator,
     korona_fixidx,
     run_zarr2lufxml,
 )
@@ -309,32 +309,19 @@ def macvin_reports_flow(dry_run: bool = False, cruise: str | None = None):
         path_data = get_paths(silver_dir)
         logger.info(cruise)
 
-        for _type in path_data["reports"].keys():
-            # Check if report exists:
-            zreport = path_data["reports"][_type] / "*_reports.zarr"
-            _zreport = list(zreport.parent.glob(zreport.name))
-
-            if not _zreport:
-                try:
-                    logger.info(
-                        f"Report does not exist : {str(path_data['reports'][_type]).split('/')[-3]}"
-                    )
-                    reportgeneration_zarr(
-                        preprocessing=path_data["preprocessing"][_type],
-                        target_classification=path_data["target_classification"],
-                        bottom_detection=path_data["bottom_detection"],
-                        cruise=cruise,
-                        reports=path_data["reports"][_type],
-                        dry_run=dry_run,
-                    )
-                except Exception:
-                    logger.info(
-                        "Preprocessing pipeline failed for this case — continuing with next case"
-                    )
-            else:
-                logger.info(
-                    f"Report exists         : {str(path_data['reports'][_type]).split('/')[-3]}"
-                )
+        if rerun:
+            logger.info(f"Bronze dir: {bronze_dir}")
+            logger.info(f"Bronze dir is available : {bronze_dir.exists()}")
+            logger.info(f"Silver dir: {silver_dir}")
+            report_flow(
+                cruise=str(cruise),
+                silver_dir=silver_dir,
+                dry_run=dry_run,
+            )
+        else:
+            logger.info(
+                f"Cruise is already processed. Remove {row['status']} from cruises.csv to rerun processing."
+            )
 
 
 def macvin_preprocessing_flow(dry_run: bool = False, cruise: str | None = None):
@@ -421,7 +408,7 @@ def macvin_test_flow(dry_run: bool = True):
         silver_dir=silver_dir,
         dry_run=dry_run,
     )
-    
+
     preprocessing_flow(
         cruise=str(cruise),
         bronze_dir=bronze_dir,
@@ -430,6 +417,12 @@ def macvin_test_flow(dry_run: bool = True):
     )
 
     atcprocessing_flow(
+        cruise=str(cruise),
+        silver_dir=silver_dir,
+        dry_run=dry_run,
+    )
+
+    report_flow(
         cruise=str(cruise),
         silver_dir=silver_dir,
         dry_run=dry_run,
@@ -530,3 +523,33 @@ def atcprocessing_flow(
             "ATC processing pipeline failed for this case — continuing with next case"
         )
 
+
+def report_flow(
+    cruise: str,
+    silver_dir: Path,
+    dry_run: bool = False,
+):
+
+    logger.info(f"#### {cruise} ####")
+    path_data = get_paths(silver_dir)
+
+    # Loop over reports
+    for _type in path_data["reports"].keys():
+
+        try:
+            logger.info(f"Creating report : {str(path_data['reports'][_type]).split('/')[-3]}")
+            
+            # Pick this up from here
+            sv_echo_integrator(
+                preprocessing=path_data["preprocessing"][_type],
+                target_classification=path_data["target_classification"],
+                bottom_detection=False,
+                cruise=cruise,
+                reports=path_data["reports"][_type],
+                dry_run=dry_run,
+            )
+
+        except Exception:
+            logger.info(
+                f"Failed creating report : {str(path_data['reports'][_type]).split('/')[-3]}"
+            )

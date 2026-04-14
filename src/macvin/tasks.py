@@ -71,8 +71,7 @@ def run_docker_image(
         )
         logger.debug("Docker stdout:\n%s", result.stdout)
         logger.debug("Docker stderr:\n%s", result.stderr)
-
-        logger.info("### Docker task completed successfully ###")
+        logger.info("Docker image %s completed successfully", image)
 
     except subprocess.CalledProcessError as e:
         logger.error("Docker failed with exit code %s", e.returncode)
@@ -87,7 +86,7 @@ def korona_fixidx(
     dry_run: bool = False,
 ):
     return run_docker_image(
-        image="acoustic-ek_preprocessing_korona-fixidx_blueinsight:local",
+        image="acoustic-ek_preprocessing_korona-fixidx:local",
         volumes={
             "/IDX": str(idx),
             "/PREPROCESSING": str(preprocessing),
@@ -105,7 +104,7 @@ def korona_noisefiltering(
     dry_run: bool = False,
 ):
     return run_docker_image(
-        image="acoustic-ek_preprocessing_korona-noisefiltering_blueinsight:local",
+        image="acoustic-ek_preprocessing_korona-noisefiltering:local",
         volumes={
             "/RAWDATA": str(rawdata),
             "/IDX": str(idxdata),
@@ -124,7 +123,7 @@ def korona_preprocessing(
     dry_run: bool = False,
 ):
     return run_docker_image(
-        image="acoustic-ek_preprocessing_korona-preprocessing_blueinsight:local",
+        image="acoustic-ek_preprocessing_korona-preprocessing:local",
         volumes={
             "/RAWDATA": str(rawdata),
             "/IDX": str(idxdata),
@@ -142,7 +141,7 @@ def mackerel_korneliussen2016(
     dry_run: bool = False,
 ):
     return run_docker_image(
-        image="acoustic-ek_target-classification_mackerel-korneliussen2016_blueinsight:local",
+        image="acoustic-ek_target-classification_mackerel-korneliussen2016:local",
         volumes={
             "/PREPROCESSING": str(preprocessing),
             "/TARGET_CLASSIFICATION": str(target_classification),
@@ -153,7 +152,7 @@ def mackerel_korneliussen2016(
     )
 
 
-def reportgeneration_zarr(
+def sv_echo_integrator(
     preprocessing: Path,
     target_classification: Path,
     bottom_detection: Path,
@@ -164,10 +163,16 @@ def reportgeneration_zarr(
     env = {
         "CATEGORY": '["1000004", "1000005"]',
         "CRUISE": cruise,
+        "SEABED_REMOVE": False, # Change to True after testing
+        "SEABED_PAD": -0.5,
+        "SURFACE_PAD": 10,
+        "SV_LOWER_THRESHOLD": -82, # false or dB
+        "PingAxisInterval": 0.1,
+        "ChannelDepthInterval": 10
     }
 
     return run_docker_image(
-        image="acoustic-ek_reportgeneration-zarr:latest",
+        image="acoustic-ek_reports_sv-echo-integrator:local",
         volumes={
             "/PREPROCESSING": str(preprocessing),
             "/TARGET_CLASSIFICATION": str(target_classification),
