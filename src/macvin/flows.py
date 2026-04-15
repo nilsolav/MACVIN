@@ -401,7 +401,7 @@ def macvin_test_flow(dry_run: bool = True):
         basedir / Path("test_data_azure_silver") / cruise / Path("ACOUSTIC", "EK")
     )
     logger.info(f"Silver dir : {silver_dir}")
-    """
+    
     idxprocessing_flow(
         cruise=str(cruise),
         bronze_dir=bronze_dir,
@@ -421,7 +421,7 @@ def macvin_test_flow(dry_run: bool = True):
         silver_dir=silver_dir,
         dry_run=dry_run,
     )
-    """
+
     report_flow(
         cruise=str(cruise),
         silver_dir=silver_dir,
