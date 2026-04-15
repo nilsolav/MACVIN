@@ -306,13 +306,12 @@ def macvin_reports_flow(dry_run: bool = False, cruise: str | None = None):
     for idx, row in df.iterrows():
         cruise = row["cruise"]
         silver_dir = basedir / Path("silver") / cruise / Path("ACOUSTIC", "EK")
-        path_data = get_paths(silver_dir)
+        rerun = row["status"] not in ("OK", "FAIL")
         logger.info(cruise)
 
         if rerun:
-            logger.info(f"Bronze dir: {bronze_dir}")
-            logger.info(f"Bronze dir is available : {bronze_dir.exists()}")
             logger.info(f"Silver dir: {silver_dir}")
+            logger.info(f"Silver dir is available : {silver_dir.exists()}")
             report_flow(
                 cruise=str(cruise),
                 silver_dir=silver_dir,
@@ -320,7 +319,7 @@ def macvin_reports_flow(dry_run: bool = False, cruise: str | None = None):
             )
         else:
             logger.info(
-                f"Cruise is already processed. Remove {row['status']} from cruises.csv to rerun processing."
+                f"Cruise is already processed or doomed/deemed to fail. Remove {row['status']} from cruises.csv to rerun processing."
             )
 
 
