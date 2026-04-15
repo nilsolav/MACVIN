@@ -163,9 +163,9 @@ def sv_echo_integrator(
     env = {
         "CATEGORY": '["1000004", "1000005"]',
         "CRUISE": cruise,
-        "SEABED_REMOVE": False, # Change to True after testing
+        "SEABED_REMOVE": True, # Change to True after testing
         "SEABED_PAD": -0.5,
-        "SURFACE_PAD": 10,
+        "SURFACE_PAD": 0,
         "SV_LOWER_THRESHOLD": -82, # false or dB
         "PingAxisInterval": 0.1,
         "ChannelDepthInterval": 10
