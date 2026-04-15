@@ -17,7 +17,7 @@ def macvin_consistency_flow(
     cruise: str | None = None,
     quick_run: bool = True
 ):
-    
+
     logger.info("#### Running consistency plot ####")
 
     if quick_run:
@@ -81,28 +81,30 @@ def macvin_consistency_flow(
 
 
 def calculate_dist(sv_pre_f, sv_noise_f, labels_f, dataqc_f, quick_run=True):
-    
-    # Calculate the sv mackerel distribution
-    chunks = {"frequency": 1, "ping_time": 2048}
 
     sv_pre = (xr.open_mfdataset(str(sv_pre_f)+"/*.nc",
                                 chunks="auto",
                                 combine="by_coords")
                 .sortby("frequency")
               )
-    logger.info(sv_pre["sv"].encoding.get("chunksizes"))
     sv_pre = depthtorange(sv_pre)
-
+    logger.debug(f"Chunk size for sv_pre: {sv_pre['sv'].encoding.get('chunksizes')}")
+    
     sv_noise = (xr.open_mfdataset(str(sv_noise_f)+"/*.nc",
                                   chunks = "auto",
                                   combine="by_coords")
                 .sortby("frequency")
                 )
     sv_noise = depthtorange(sv_noise)
-
+    logger.debug(f"Chunk size for sv_noise: {sv_noise['sv'].encoding.get('chunksizes')}")
+    
     labels = xr.open_mfdataset(str(labels_f)+"/*.nc",
                                chunks="auto",
                                combine="by_coords")
+    with xr.set_options(display_max_rows=100):
+        logger.debug(f"sv_pre \n{sv_pre}")
+        logger.debug(f"sv_noise \n{sv_noise}")
+        logger.debug(f"labels \n{labels}")
 
     # Create bottom mask
     bottom_noise =  bottom_mask_single_freq(sv_noise, sv_noise)
@@ -326,7 +328,9 @@ def bottom_mask_single_freq(
     xr.Dataset
         Dataset containing boolean mask `bottom_noise` with dims (ping_time, range)
     """
-
+    import pdb
+    pdb.set_trace()
+    
     # Select frequency
     sv = ds_sv["sv"].sel(frequency=frequency)
     bottom = ds_bottom["bottom_depth"]
