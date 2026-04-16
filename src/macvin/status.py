@@ -120,7 +120,7 @@ def check_report(report: Path):
         report_zarr = True
     else:
         report_zarr = False
-    prefix = f"{str(report).split('/')[-7].ljust(strN)} | reportgenerator       | Preprocessing used: {str(report).split('/')[-3].ljust(strN)}"
+    prefix = f"{str(report).split('/')[-7].ljust(strN)} | sv-echo-integrator    | Preprocessing used: {str(report).split('/')[-3].ljust(strN)}"
     log_exists(logger, prefix, "Zarr store exist", report_zarr)
     log_exists(logger, prefix, "Luf file exist", luf.exists())
 

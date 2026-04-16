@@ -51,14 +51,14 @@ def get_paths(silver_dir: Path) -> dict:
             "REPORTS",
             "korona_noisefiltering",
             "mackerel_korneliussen2016",
-            "reportgeneration-zarr",
+            "sv-echo-integrator",
         ),
         "preprocessing": silver_dir
         / Path(
             "REPORTS",
             "korona_preprocessing",
             "mackerel_korneliussen2016",
-            "reportgeneration-zarr",
+            "sv-echo-integrator",
         ),
     }
     return dat
