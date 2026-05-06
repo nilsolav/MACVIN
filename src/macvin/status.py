@@ -39,12 +39,22 @@ def get_freq_and_time_bounds(nc_file, time_name="ping_time"):
 
 
 def check_sv(preprocessed: Path, quick_run: bool = False):
-    prefix = f"{str(preprocessed).split('/')[-5].ljust(strN)} | preprocessing         | Preprocessing used: {str(preprocessed).split('/')[-1].ljust(strN)}"
+    logger.info(f"Preprocessed sv path {preprocessed}")
+    prefix = f"{str(preprocessed).split('/')[-6].ljust(strN)} | preprocessing         | Preprocessing used: {str(preprocessed).split('/')[-2].ljust(strN)}"
     sv_nc_files = sorted(list(preprocessed.glob("*.nc")))
     sv_nc = len(sv_nc_files)
     log_exists(logger, prefix, f"{sv_nc} nc files", sv_nc > 0)
     if sv_nc > 0 and not quick_run:
         check_monotonic(sv_nc_files, prefix)
+    return sv_nc
+
+
+def check_sv_zarr(preprocessed: Path, quick_run: bool = False):
+    logger.info(f"Preprocessed zarr path {preprocessed}")
+    prefix = f"{str(preprocessed).split('/')[-6].ljust(strN)} | sv2zarr               | Preprocessing used: {str(preprocessed).split('/')[-2].ljust(strN)}"
+    sv_nc_files = sorted(list(preprocessed.glob("*.zarr")))
+    sv_nc = len(sv_nc_files)
+    log_exists(logger, prefix, f"{sv_nc} zarr store", sv_nc > 0)
     return sv_nc
 
 
@@ -100,16 +110,28 @@ def check_monotonic(sv_nc_files: list[Path], prefix: str):
 
 
 def check_labels(target_classification: Path):
+    logger.info(f"ATC nc path {target_classification}")
     # labels_nc
     labels_nc_files = sorted(list(target_classification.glob("*.nc")))
     labels_nc = len(labels_nc_files)
-    prefix = f"{str(target_classification).split('/')[-6].ljust(strN)} | target_classification | Preprocessing used: korona_noisefiltering    "
+    prefix = f"{str(target_classification).split('/')[-7].ljust(strN)} | target_classification | Preprocessing used: korona_noisefiltering    "
+    log_exists(logger, prefix, f"{labels_nc} nc files", labels_nc > 0)
+    return {"atc": labels_nc}
+
+
+def check_labels_zarr(target_classification: Path):
+    logger.info(f"ATC zarr path {target_classification}")
+    # labels_nc
+    labels_nc_files = sorted(list(target_classification.glob("*.zarr")))
+    labels_nc = len(labels_nc_files)
+    prefix = f"{str(target_classification).split('/')[-7].ljust(strN)} | labels2zarr           | Preprocessing used: korona_noisefiltering    "
     log_exists(logger, prefix, f"{labels_nc} nc files", labels_nc > 0)
     return {"atc": labels_nc}
 
 
 def check_report(report: Path):
     # report
+    logger.info(f"Report path {report}")
     luf = report / Path("ListUserFile26_.xml")
 
     # Zarr report
@@ -127,6 +149,7 @@ def check_report(report: Path):
 
 def check_idx(idxdata: Path):
     # labels_nc
+    logger.info(f"idx data path: {idxdata}")
     idxfiles = sorted(list(idxdata.glob("*.idx")))
     _str1 = "Directly from raw data".ljust(strN + 20)
     _str2 = " idxfix".ljust(strN - 2)
@@ -138,7 +161,7 @@ def check_idx(idxdata: Path):
 
 def check_raw(rawdata: Path, original_rawdata: Path):
     # labels_nc
-    logger.info(rawdata)
+    logger.info(f"Raw data path: {rawdata}")
     rawfiles = sorted(list(rawdata.glob("*.raw")))
     idxfiles = sorted(list(rawdata.glob("*.idx")))
     ek500files = sorted(list(original_rawdata.glob("*Data")))
@@ -173,9 +196,20 @@ def survey_status(silver_dir: Path, bronze_dir: Path, bronze_ek500_dir: Path, lo
         n_nc = check_sv(sv_dir, quick_run)
         pre[_type] = n_nc
 
+    pre_zarr = {}
+    for _type in path_data["preprocessing_zarr"].keys():
+        sv_zarr_dir = path_data["preprocessing_zarr"][_type]
+        n_nc = check_sv_zarr(sv_zarr_dir, quick_run)
+        pre_zarr[_type] = n_nc
+
+    # Check sv_zarr
+
     # Check atc
     atc = check_labels(path_data["target_classification"])
-    logger.debug(f"{raw} {idx} {pre} {atc}")
+    atc_zarr = check_labels_zarr(path_data["target_classification"])
+    logger.debug(f"{raw} {idx} {pre} {pre_zarr} {atc} {atc_zarr}")
+
+
     # check number of files
     if raw["raw"] > idx["idx"]:
         logger.error(f"There are more raw files ({raw['raw']}) than converted idx files ({idx['idx']}). Something failed in fixidx.")

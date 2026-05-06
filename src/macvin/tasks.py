@@ -86,7 +86,7 @@ def korona_fixidx(
     dry_run: bool = False,
 ):
     return run_docker_image(
-        image="acoustic-ek_preprocessing_korona-fixidx:local",
+        image="acoustic-ek_processing_korona-fixidx:local",
         volumes={
             "/IDX": str(idx),
             "/PREPROCESSING": str(preprocessing),
@@ -104,7 +104,7 @@ def korona_noisefiltering(
     dry_run: bool = False,
 ):
     return run_docker_image(
-        image="acoustic-ek_preprocessing_korona-noisefiltering:local",
+        image="acoustic-ek_processing_korona-noisefiltering:local",
         volumes={
             "/RAWDATA": str(rawdata),
             "/IDX": str(idxdata),
@@ -123,7 +123,7 @@ def korona_preprocessing(
     dry_run: bool = False,
 ):
     return run_docker_image(
-        image="acoustic-ek_preprocessing_korona-preprocessing:local",
+        image="acoustic-ek_processing_korona-preprocessing:local",
         volumes={
             "/RAWDATA": str(rawdata),
             "/IDX": str(idxdata),
@@ -152,6 +152,50 @@ def mackerel_korneliussen2016(
     )
 
 
+def atc2zarr(
+    nc_mount: Path,
+    zarr_mount: Path,
+    cruise: str,
+    dry_run: bool = False,
+):
+    env = {
+        "ZARR_STORE": "labels.zarr",
+    }
+
+    return run_docker_image(
+        image="acoustic-ek_processing_nc-zarr:local",
+        volumes={
+            "/NC_MOUNT": str(nc_mount),
+            "/ZARR_MOUNT": str(zarr_mount),
+        },
+        artifact_key="nc_zarr",
+        env=env,
+        dry_run=dry_run,
+    )
+
+
+def preprocess2zarr(
+    nc_mount: Path,
+    zarr_mount: Path,
+    cruise: str,
+    dry_run: bool = False,
+):
+    env = {
+        "ZARR_STORE": "sv.zarr",
+    }
+
+    return run_docker_image(
+        image="acoustic-ek_processing_nc-zarr:local",
+        volumes={
+            "/NC_MOUNT": str(nc_mount),
+            "/ZARR_MOUNT": str(zarr_mount),
+        },
+        artifact_key="nc_zarr",
+        env=env,
+        dry_run=dry_run,
+    )
+
+
 def sv_echo_integrator(
     preprocessing: Path,
     target_classification: Path,
@@ -170,7 +214,6 @@ def sv_echo_integrator(
         "PingAxisInterval": 0.1,
         "ChannelDepthInterval": 10
     }
-
     return run_docker_image(
         image="acoustic-ek_reports_sv-echo-integrator:local",
         volumes={

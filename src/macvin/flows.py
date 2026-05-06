@@ -6,6 +6,8 @@ from macvin.tasks import (
     sv_echo_integrator,
     korona_fixidx,
     run_zarr2lufxml,
+    atc2zarr,
+    preprocess2zarr,
 )
 import pandas as pd
 import logging
@@ -22,29 +24,45 @@ logger = logging.getLogger(__name__)
 # ------------------
 
 
+
 def get_paths(silver_dir: Path) -> dict:
     dat = {}
     dat["idxdata"] = silver_dir / Path("EK_RAWDATA", "korona_fixidx")
 
     dat["preprocessing"] = {
-        "noisefiltering": silver_dir / Path("PREPROCESSING", "korona_noisefiltering"),
-        "preprocessing": silver_dir / Path("PREPROCESSING", "korona_preprocessing"),
+        "noisefiltering": silver_dir / Path("PREPROCESSING", "korona_noisefiltering", "sv_nc"),
+        "preprocessing": silver_dir / Path("PREPROCESSING", "korona_preprocessing", "sv_nc"),
+    }
+
+    dat["preprocessing_zarr"] = {
+        "noisefiltering": silver_dir / Path("PREPROCESSING", "korona_noisefiltering", "sv_zarr"),
+        "preprocessing": silver_dir / Path("PREPROCESSING", "korona_preprocessing", "sv_zarr"),
     }
 
     dat["target_classification"] = silver_dir / Path(
         "TARGET_CLASSIFICATION",
         "korona_noisefiltering",
         "mackerel_korneliussen2016",
+        "labels_nc",
+    )
+
+    dat["target_classification_zarr"] = silver_dir / Path(
+        "TARGET_CLASSIFICATION",
+        "korona_noisefiltering",
+        "mackerel_korneliussen2016",
+        "labels_zarr",
     )
 
     dat["quality_control"] = silver_dir / Path(
         "QUALITY_CONTROL", "korona_datacompression"
     )
+
     dat["sv_histograms"] = silver_dir / Path(
         "QUALITY_CONTROL", "sv_histograms"
     )
 
     dat["bottom_detection"] = silver_dir
+
     dat["reports"] = {
         "noisefiltering": silver_dir
         / Path(
@@ -171,7 +189,12 @@ def _make_filtered_source_dir(
 # Main flow functions
 # ------------------
 
-def macvin_convert_ek500_flow(dry_run: bool = False, cruise: str | None = None):
+def macvin_convert_ek500_flow(
+    silver_dir: Path,
+    cruise: str | None = None,
+    dry_run: bool = False,
+    ):
+
     logger.info("#### MACVIN EK500 FLOW ####")
 
     df, exclude_files = get_survey(cruise=cruise)
@@ -223,7 +246,12 @@ def macvin_convert_ek500_flow(dry_run: bool = False, cruise: str | None = None):
             logger.info(f"{cruise} does not contatin EK 500 data")
 
 
-def macvin_idxprocessing_flow(dry_run: bool = False, cruise: str | None = None):
+def macvin_idxprocessing_flow(
+        silver_dir: Path,
+        cruise: str | None = None,
+        dry_run: bool = False,
+):
+
     logger.info("#### MACVIN IDXFIX FLOW ####")
 
     basedir = Path("/data/s3/MACWIN-scratch")
@@ -255,7 +283,12 @@ def macvin_idxprocessing_flow(dry_run: bool = False, cruise: str | None = None):
             logger.exception("Fix idx failed for this case — continuing with next case")
 
 
-def macvin_lufreports_flow(dry_run: bool = False, cruise: str | None = None):
+def macvin_lufreports_flow(
+        silver_dir: Path,
+        cruise: str | None = None,
+        dry_run: bool = False,
+):
+
     logger.info("#### MACVIN LUF REPORTS FLOW ####")
 
     df, exclude_files = get_survey(cruise=cruise)
@@ -296,7 +329,12 @@ def macvin_lufreports_flow(dry_run: bool = False, cruise: str | None = None):
                 )
 
 
-def macvin_reports_flow(dry_run: bool = False, cruise: str | None = None):
+def macvin_reports_flow(
+        silver_dir: Path,
+        cruise: str | None = None,
+        dry_run: bool = False,
+):
+
     logger.info("#### MACVIN REPORTS FLOW ####")
 
     df, exclude_files = get_survey(cruise=cruise)
@@ -323,7 +361,12 @@ def macvin_reports_flow(dry_run: bool = False, cruise: str | None = None):
             )
 
 
-def macvin_preprocessing_flow(dry_run: bool = False, cruise: str | None = None):
+def macvin_preprocessing_flow(
+        silver_dir: Path,
+        cruise: str | None = None,
+        dry_run: bool = False,
+):
+
     logger.info("#### MACVIN PREPROCESSING FLOW ####")
 
     df, exclude_files = get_survey(cruise=cruise)
@@ -353,7 +396,12 @@ def macvin_preprocessing_flow(dry_run: bool = False, cruise: str | None = None):
             )
 
 
-def macvin_atcprocessing_flow(dry_run: bool = False, cruise: str | None = None):
+def macvin_atcprocessing_flow(
+        silver_dir: Path,
+        cruise: str | None = None,
+        dry_run: bool = False,
+):
+
     logger.info("#### MACVIN ATCPROCESSING FLOW ####")
 
     df, exclude_files = get_survey(cruise=cruise)
@@ -377,6 +425,8 @@ def macvin_atcprocessing_flow(dry_run: bool = False, cruise: str | None = None):
             logger.info(
                 f"Cruise is already processed. Remove {row['status']} from cruises.csv to rerun processing."
             )
+
+# macvin_atc2zarr_flow
 
 
 def macvin_test_flow(dry_run: bool = True):
@@ -415,7 +465,19 @@ def macvin_test_flow(dry_run: bool = True):
         dry_run=dry_run,
     )
 
+    preprocess2zarr_flow(
+        cruise=str(cruise),
+        silver_dir=silver_dir,
+        dry_run=dry_run,
+    )
+
     atcprocessing_flow(
+        cruise=str(cruise),
+        silver_dir=silver_dir,
+        dry_run=dry_run,
+    )
+
+    atc2zarr_flow(
         cruise=str(cruise),
         silver_dir=silver_dir,
         dry_run=dry_run,
@@ -540,8 +602,8 @@ def report_flow(
             
             # Pick this up from here
             sv_echo_integrator(
-                preprocessing=path_data["preprocessing"][_type],
-                target_classification=path_data["target_classification"],
+                preprocessing=path_data["preprocessing_zarr"][_type],
+                target_classification=path_data["target_classification_zarr"],
                 bottom_detection=False,
                 cruise=cruise,
                 reports=path_data["reports"][_type],
@@ -552,3 +614,66 @@ def report_flow(
             logger.info(
                 f"Failed creating report : {str(path_data['reports'][_type]).split('/')[-3]}"
             )
+
+
+#
+# cxxxxxxxxx
+#
+
+def preprocess2zarr_flow(
+    cruise: str,
+    silver_dir: Path,
+    dry_run: bool = False,
+):
+    logger.info(f"#### preprocess2zarr for {cruise} ####")
+
+    _silver_dir = silver_dir / cruise / Path("ACOUSTIC", "EK")
+    path_data = get_paths(_silver_dir)
+    df, exclude_files = get_survey(cruise=cruise)
+
+    # Loop over preprocessed data sets
+    for _type in path_data["preprocessing"].keys():
+
+        try:
+            logger.info(f"Creating zarr store : {str(path_data['preprocessing'][_type]).split('/')[-3]}")
+
+            preprocess2zarr(
+                nc_mount=path_data["preprocessing"][_type],
+                zarr_mount=path_data["preprocessing_zarr"][_type],
+                cruise=cruise,
+                dry_run=dry_run,
+            )
+
+        except Exception:
+            logger.info(
+                f"Failed creating zarr store : {str(path_data['reports'][_type]).split('/')[-3]}"
+            )
+
+
+def atc2zarr_flow(
+    cruise: str,
+    silver_dir: Path,
+    dry_run: bool = False,
+):
+
+    logger.info(f"#### atc2_zarr for {cruise} ####")
+
+    _silver_dir = silver_dir / cruise / Path("ACOUSTIC", "EK")
+    path_data = get_paths(_silver_dir)
+    df, exclude_files = get_survey(cruise=cruise)
+
+    try:
+        logger.info(f"Creating zarr store : {str(path_data['reports']).split('/')[-2]}")
+
+        # Pick this up from here
+        atc2zarr(
+            nc_mount=path_data["target_classification"],
+            zarr_mount=path_data["target_classification_zarr"],
+            cruise=cruise,
+            dry_run=dry_run,
+        )
+
+    except Exception:
+        logger.info(
+            f"Failed creating report : {str(path_data['reports']).split('/')[-2]}"
+        )

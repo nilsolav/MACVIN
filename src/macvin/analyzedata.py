@@ -20,64 +20,32 @@ def macvin_consistency_flow(
 
     logger.info("#### Running consistency plot ####")
 
-    if quick_run:
-        logger.info('Test run')
-        crimacsratch = Path(os.getenv("CRIMACSCRATCH"))
-        dat = crimacsratch / Path("test_data_azure/",
-                                  "S2005114_PGOSARS_4174/ACOUSTIC/EK/")
-        results = crimacsratch / Path("test_data_azure_silver/",
-                                      "S2005114_PGOSARS_4174/ACOUSTIC/EK/")
+    _silver_dir = silver_dir / cruise / Path("ACOUSTIC", "EK")
+    path_data = get_paths(_silver_dir)
+    df, exclude_files = get_survey(cruise=cruise)
 
-        sv_pre_f = dat / Path("PREPROCESSING/korona_preprocessing/sv_nc/")
-        sv_noise_f = dat / Path("PREPROCESSING/korona_noisefiltering/sv_nc/")
-        labels_f = dat / Path("TARGET_CLASSIFICATION/korona_noisefiltering/"
-                              "mackerel_korneliussen2016/labels_nc/")
-        dataqc_f = results / Path("QUALITY_CONTROL/sv_histograms")
-        dataqc_f.mkdir(parents=True, exist_ok=True)
+    path_data = get_paths(_silver_dir)
 
-        logger.info(sv_pre_f)
-        logger.info(sv_noise_f)
-        logger.info(labels_f)
-        logger.info(dataqc_f)
+    labels_f = path_data["target_classification"]
+    sv_noise_f = path_data["preprocessing"]["noisefiltering"]
+    sv_pre_f = path_data["preprocessing"]["preprocessing"]
+    dataqc_f = path_data["sv_histograms"]
+    dataqc_f.mkdir(parents=True, exist_ok=True)
+    
+    logger.info(f"Create sv histograms for {cruise}")
+    logger.info(sv_pre_f)
+    logger.info(sv_noise_f)
+    logger.info(labels_f)
+    logger.info(dataqc_f)
 
+    if not dry_run:
         calculate_dist(sv_pre_f,
                        sv_noise_f,
                        labels_f,
                        dataqc_f,
                        quick_run)
-
     else:
-        basedir = Path("/data/s3/MACWIN-scratch")
-        df, exclude_files = get_survey(cruise=cruise)
-
-        for idx, row in df.iterrows():
-            cruise = row["cruise"]
-            silver_dir = basedir / Path("silver") / cruise / Path(
-                "ACOUSTIC", "EK")
-            path_data = get_paths(silver_dir)
-
-            df, exclude_files = get_survey(cruise=cruise)
-
-            labels_f = path_data["target_classification"]
-            sv_noise_f = path_data["preprocessing"]["noisefiltering"]
-            sv_pre_f = path_data["preprocessing"]["preprocessing"]
-            dataqc_f = path_data["sv_histograms"]
-            dataqc_f.mkdir(parents=True, exist_ok=True)
-
-            logger.info(f"Create sv histograms for {cruise}")
-            logger.info(sv_pre_f)
-            logger.info(sv_noise_f)
-            logger.info(labels_f)
-            logger.info(dataqc_f)
-
-            if not dry_run:
-                calculate_dist(sv_pre_f,
-                               sv_noise_f,
-                               labels_f,
-                               dataqc_f,
-                               quick_run)
-            else:
-                logger.info("Dry run")
+        logger.info("Dry run")
 
 
 def calculate_dist(sv_pre_f, sv_noise_f, labels_f, dataqc_f, quick_run=True):
