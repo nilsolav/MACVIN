@@ -125,7 +125,7 @@ def check_labels_zarr(target_classification: Path):
     labels_nc_files = sorted(list(target_classification.glob("*.zarr")))
     labels_nc = len(labels_nc_files)
     prefix = f"{str(target_classification).split('/')[-7].ljust(strN)} | labels2zarr           | Preprocessing used: korona_noisefiltering    "
-    log_exists(logger, prefix, f"{labels_nc} nc files", labels_nc > 0)
+    log_exists(logger, prefix, f"{labels_nc} zarr store", labels_nc > 0)
     return {"atc": labels_nc}
 
 
@@ -135,10 +135,8 @@ def check_report(report: Path):
     luf = report / Path("ListUserFile26_.xml")
 
     # Zarr report
-    zarr_report = report / Path("*_reports.zarr")
-    _zreport = list(zarr_report.parent.glob(zarr_report.name))
-
-    if _zreport:
+    zarr_report = report / Path("sA.zarr")
+    if zarr_report.exists():
         report_zarr = True
     else:
         report_zarr = False
@@ -206,7 +204,7 @@ def survey_status(silver_dir: Path, bronze_dir: Path, bronze_ek500_dir: Path, lo
 
     # Check atc
     atc = check_labels(path_data["target_classification"])
-    atc_zarr = check_labels_zarr(path_data["target_classification"])
+    atc_zarr = check_labels_zarr(path_data["target_classification_zarr"])
     logger.debug(f"{raw} {idx} {pre} {pre_zarr} {atc} {atc_zarr}")
 
 

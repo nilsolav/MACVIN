@@ -160,6 +160,10 @@ def atc2zarr(
 ):
     env = {
         "ZARR_STORE": "labels.zarr",
+        "CHUNK_SIZE_PING_TIME": 1024,
+        "CHUNK_SIZE_RANGE": 2500,
+        "CHUNK_SIZE_FREQUENCY": 1,
+        "CHUNK_SIZE_CATEGORY": 1,
     }
 
     return run_docker_image(

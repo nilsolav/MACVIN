@@ -301,19 +301,18 @@ def macvin_lufreports_flow(
         path_data = get_paths(silver_dir)
 
         for _type in path_data["reports"].keys():
-            zreport = path_data["reports"][_type] / "*_reports.zarr"
-            _zreport = list(zreport.parent.glob(zreport.name))
+            zreport = Path(path_data["reports"][_type]) / "sA.zarr"
             par = luf_parameters()
             par["Code"] = cruise
-            if _zreport:
+            if zreport.exists():
                 try:
                     logger.info(
                         f"{cruise} Run the luf export for {str(path_data['reports'][_type]).split('/')[-3]}"
                     )
-                    luf_report = _zreport[0].parent / "ListUserFile26_.xml"
+                    luf_report = zreport.parent / "ListUserFile26_.xml"
                     logger.debug(f"luf report file: {luf_report}")
                     run_zarr2lufxml(
-                        zarr_report=_zreport[0],
+                        zarr_report=zreport,
                         luf_report=luf_report,
                         par=par,
                         dry_run=dry_run,
