@@ -4,8 +4,8 @@ REL=ACOUSTIC/EK/TARGET_CLASSIFICATION/korona_noisefiltering/mackerel_korneliusse
 for cruise_dir in "$BASE"/*; do
     [ -d "$cruise_dir" ] || continue
 
-    src="$cruise_dir/$REL"
-    dst="$src/sv_nc"
+    src="$cruise_dir/$REL/sv_nc"
+    dst="$src/labels_nc"
 
     [ -d "$src" ] || continue
 
