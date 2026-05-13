@@ -209,7 +209,8 @@ def sv_echo_integrator(
     dry_run: bool = False,
 ):
     env = {
-        "CATEGORY": '["1000004", "1000005"]',
+        "CATEGORIES": '["1000004", "1000005"]',
+        "FREQUENCIES": '["38000", "200000"]',
         "CRUISE": cruise,
         "SEABED_REMOVE": True, # Change to True after testing
         "SEABED_PAD": -0.5,

@@ -71,13 +71,13 @@ def get_paths(silver_dir: Path) -> dict:
             "mackerel_korneliussen2016",
             "sv-echo-integrator",
         ),
-        "preprocessing": silver_dir
-        / Path(
-            "REPORTS",
-            "korona_preprocessing",
-            "mackerel_korneliussen2016",
-            "sv-echo-integrator",
-        ),
+        #"preprocessing": silver_dir
+        #/ Path(
+        #    "REPORTS",
+        #    "korona_preprocessing",
+        #    "mackerel_korneliussen2016",
+        #    "sv-echo-integrator",
+        #),
     }
     return dat
 
@@ -601,8 +601,8 @@ def report_flow(
             
             # Pick this up from here
             sv_echo_integrator(
-                preprocessing=path_data["preprocessing_zarr"][_type],
-                target_classification=path_data["target_classification_zarr"],
+                preprocessing=path_data["preprocessing"][_type],
+                target_classification=path_data["target_classification"],
                 bottom_detection=False,
                 cruise=cruise,
                 reports=path_data["reports"][_type],
