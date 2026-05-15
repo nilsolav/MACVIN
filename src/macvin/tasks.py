@@ -4,6 +4,9 @@ import subprocess
 import logging
 from zarr2lufxml import write_acoustic_xml
 import xarray as xr
+import threading
+from collections.abc import Mapping
+
 
 logger = logging.getLogger(__name__)
 
@@ -17,11 +20,15 @@ def run_zarr2lufxml(
     if not dry_run:
         _luf_report = str(luf_report)
         zr = xr.open_zarr(str(zarr_report))
-        logger.debug(f"The content of the reports.zarr store:\n {zr}")
+        logger.info(f"The content of the reports.zarr store:\n {zr}")
         cat = par["category"]
-        if "all" not in cat:
-            zr = zr.assign_coords(category=[str(c) for c in zr.category.values])
-            zr = zr.sel(category=cat, frequency=par["frequency"])
+        logger.info(cat)
+        logger.info(par["frequency"])
+        #if "all" not in cat:
+        #    zr = zr.assign_coords(category=[str(c) for c in zr.category.values])
+        zr = zr.sel(category=cat, frequency=par["frequency"])
+
+        logger.info(zr)
 
         write_acoustic_xml(zr, par, _luf_report)
 
@@ -37,13 +44,12 @@ def run_docker_image(
 
     for container_path, host_path in volumes.items():
         command.extend(["-v", f"{host_path}:{container_path}"])
-        logger.debug(f"Mounts: {host_path}:{container_path}")
-    # Environment variables
+        logger.debug("Mount: %s:%s", host_path, container_path)
+
     if env:
         for key, value in env.items():
-            _env = ["-e", f"{key}={value}"]
-            logger.debug(_env)
-            command.extend(_env)
+            command.extend(["-e", f"{key}={value}"])
+            logger.debug("Env: %s=%s", key, value)
 
     command.extend(
         [
@@ -52,32 +58,47 @@ def run_docker_image(
             image,
         ]
     )
-    logger.debug(command)
-    for host, container in volumes.items():
-        art = f"Mapping : `{host}` → `{container}`"
-        logger.debug(art)
+
+    logger.debug("Docker command: %s", command)
 
     if dry_run:
         logger.info("Dry run enabled – Docker command not executed")
         return
 
-    try:
-        logger.info("Try running Docker image: %s", image)
-        result = subprocess.run(
-            command,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        logger.debug("Docker stdout:\n%s", result.stdout)
-        logger.debug("Docker stderr:\n%s", result.stderr)
-        logger.info("Docker image %s completed successfully", image)
+    logger.info("Running Docker image: %s", image)
 
-    except subprocess.CalledProcessError as e:
-        logger.error("Docker failed with exit code %s", e.returncode)
-        logger.error("Docker stdout:\n%s", e.stdout)
-        logger.error("Docker stderr:\n%s", e.stderr)
-        raise
+    process = subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,  # line-buffered
+    )
+
+    stdout_thread = threading.Thread(
+        target=_stream_pipe,
+        args=(process.stdout, logger.info),
+        daemon=True,
+    )
+    stderr_thread = threading.Thread(
+        target=_stream_pipe,
+        args=(process.stderr, logger.warning),
+        daemon=True,
+    )
+
+    stdout_thread.start()
+    stderr_thread.start()
+
+    return_code = process.wait()
+
+    stdout_thread.join()
+    stderr_thread.join()
+
+    if return_code != 0:
+        logger.error("Docker failed with exit code %s", return_code)
+        raise subprocess.CalledProcessError(return_code, command)
+
+    logger.info("Docker image %s completed successfully", image)
 
 
 def korona_fixidx(
@@ -209,8 +230,8 @@ def sv_echo_integrator(
     dry_run: bool = False,
 ):
     env = {
-        "CATEGORIES": '["1000004", "1000005"]',
-        "FREQUENCIES": '["38000", "200000"]',
+        "CATEGORIES": '["1000004"]',
+        "FREQUENCIES": '["200000"]',
         "CRUISE": cruise,
         "SEABED_REMOVE": True, # Change to True after testing
         "SEABED_PAD": -0.5,
@@ -230,3 +251,15 @@ def sv_echo_integrator(
         env=env,
         dry_run=dry_run,
     )
+
+
+def _stream_pipe(pipe, log_func):
+    """Stream a subprocess pipe line-by-line into logger."""
+    try:
+        for line in iter(pipe.readline, ""):
+            if line:
+                log_func(line.rstrip())
+    finally:
+        pipe.close()
+
+

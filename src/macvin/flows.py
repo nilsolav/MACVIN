@@ -105,7 +105,7 @@ def luf_parameters():
         "AC_PingAxisIntervalUnit": "AC_PingAxisIntervalUnit_nmi",
         "AC_PingAxisIntervalOrigin": "AC_PingAxisIntervalOrigin_start",
         "TransducerOrientation": "downwards-looking",
-        "category": ['1000004', '1000005'],
+        "category": ['1000004'],
         "remove_nan_in_position": False,
         "Code": "NA",
         "LocalID": "NA",
@@ -302,7 +302,9 @@ def macvin_lufreports_flow(
 
         for _type in path_data["reports"].keys():
             zreport = Path(path_data["reports"][_type]) / "sA.zarr"
+            logger.info(f"zreport {zreport}")
             par = luf_parameters()
+            logger.info(par)
             par["Code"] = cruise
             if zreport.exists():
                 try:
@@ -310,7 +312,7 @@ def macvin_lufreports_flow(
                         f"{cruise} Run the luf export for {str(path_data['reports'][_type]).split('/')[-3]}"
                     )
                     luf_report = zreport.parent / "ListUserFile26_.xml"
-                    logger.debug(f"luf report file: {luf_report}")
+                    logger.info(f"luf report file: {luf_report}")
                     run_zarr2lufxml(
                         zarr_report=zreport,
                         luf_report=luf_report,

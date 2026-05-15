@@ -12,7 +12,6 @@ strN = 25
 
 
 def macvin_get_status(quick_run: bool = False, cruise: str | None = None):
-    logger.info("#### MACVIN STATUS FLOW ####")
 
     df, exclude_files = get_survey(cruise=cruise)
 
@@ -178,6 +177,13 @@ def check_raw(rawdata: Path, original_rawdata: Path):
 
 
 def survey_status(silver_dir: Path, bronze_dir: Path, bronze_ek500_dir: Path, logger, cruise, quick_run):
+
+    logger.info(" ")
+    logger.info("#####################################################")
+    logger.info(f"#### MACVIN STATUS FLOW for cruise {cruise} ####")
+    logger.info("#####################################################")
+    logger.info(" ")
+
     # Get the standard paths
     path_data = get_paths(silver_dir)
 
@@ -232,4 +238,5 @@ def main():
         "--cruise", type=str, help="Cruise name to process, e.g. S1513S_PSCOTIA_MXHR6"
     )
     args = parser.parse_args()
+
     macvin_get_status(quick_run=args.quick_run, cruise=args.cruise)
