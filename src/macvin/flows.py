@@ -603,8 +603,8 @@ def report_flow(
             
             # Pick this up from here
             sv_echo_integrator(
-                preprocessing=path_data["preprocessing"][_type],
-                target_classification=path_data["target_classification"],
+                preprocessing=path_data["preprocessing_zarr"][_type],
+                target_classification=path_data["target_classification_zarr"],
                 bottom_detection=False,
                 cruise=cruise,
                 reports=path_data["reports"][_type],

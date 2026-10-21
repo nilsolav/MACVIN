@@ -107,7 +107,7 @@ def korona_fixidx(
     dry_run: bool = False,
 ):
     return run_docker_image(
-        image="acoustic-ek_processing_korona-fixidx:local",
+        image="crimac/acoustic-ek_processing_korona-fixidx:dev",
         volumes={
             "/IDX": str(idx),
             "/PREPROCESSING": str(preprocessing),
@@ -125,7 +125,7 @@ def korona_noisefiltering(
     dry_run: bool = False,
 ):
     return run_docker_image(
-        image="acoustic-ek_processing_korona-noisefiltering:local",
+        image="crimac/acoustic-ek_processing_korona-noisefiltering:dev",
         volumes={
             "/RAWDATA": str(rawdata),
             "/IDX": str(idxdata),
@@ -144,7 +144,7 @@ def korona_preprocessing(
     dry_run: bool = False,
 ):
     return run_docker_image(
-        image="acoustic-ek_processing_korona-preprocessing:local",
+        image="crimac/acoustic-ek_processing_korona-preprocessing:dev",
         volumes={
             "/RAWDATA": str(rawdata),
             "/IDX": str(idxdata),
@@ -162,7 +162,7 @@ def mackerel_korneliussen2016(
     dry_run: bool = False,
 ):
     return run_docker_image(
-        image="acoustic-ek_target-classification_mackerel-korneliussen2016:local",
+        image="crimac/acoustic-ek_target-classification_mackerel-korneliussen2016:dev",
         volumes={
             "/PREPROCESSING": str(preprocessing),
             "/TARGET_CLASSIFICATION": str(target_classification),
@@ -188,7 +188,7 @@ def atc2zarr(
     }
 
     return run_docker_image(
-        image="acoustic-ek_processing_nc-zarr:local",
+        image="crimac/acoustic-ek_processing_nc-zarr:dev",
         volumes={
             "/NC_MOUNT": str(nc_mount),
             "/ZARR_MOUNT": str(zarr_mount),
@@ -210,7 +210,7 @@ def preprocess2zarr(
     }
 
     return run_docker_image(
-        image="acoustic-ek_processing_nc-zarr:local",
+        image="crimac/acoustic-ek_processing_nc-zarr:dev",
         volumes={
             "/NC_MOUNT": str(nc_mount),
             "/ZARR_MOUNT": str(zarr_mount),
@@ -236,12 +236,13 @@ def sv_echo_integrator(
         "SEABED_REMOVE": True, # Change to True after testing
         "SEABED_PAD": -0.5,
         "SURFACE_PAD": 0,
+        "SV_UPPER_THRESHOLD": -35, # false or dB (Wait threshold)
         "SV_LOWER_THRESHOLD": -82, # false or dB
         "PingAxisInterval": 0.1,
         "ChannelDepthInterval": 10
     }
     return run_docker_image(
-        image="acoustic-ek_reports_sv-echo-integrator:local",
+        image="crimac/acoustic-ek_reports_sv-echo-integrator:dev",
         volumes={
             "/PREPROCESSING": str(preprocessing),
             "/TARGET_CLASSIFICATION": str(target_classification),
